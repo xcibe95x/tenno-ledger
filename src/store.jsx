@@ -111,6 +111,24 @@ export function StoreProvider({ children }) {
     setDriveState('idle');
   }, []);
 
+  // Keep the Drive session alive while the page is open: renew the hourly
+  // token shortly after it lapses, falling back to a visible reconnect state.
+  useEffect(() => {
+    if (!driveEnabled) return;
+    const timer = setInterval(() => {
+      setDriveState(prev => {
+        if (prev === 'synced' && !driveConnected()) {
+          connectDrive()
+            .then(() => setDriveState('synced'))
+            .catch(() => setDriveState('reconnect'));
+          return 'syncing';
+        }
+        return prev;
+      });
+    }, 60000);
+    return () => clearInterval(timer);
+  }, []);
+
   const update = useCallback((fn) => {
     setProgress(prev => {
       const next = { ...fn(prev), updatedAt: Date.now(), v: VERSION };
@@ -123,13 +141,18 @@ export function StoreProvider({ children }) {
             .catch(() => setSyncState('error'));
         }, 1500);
       }
-      if (driveConnected()) {
+      if (driveEnabled && (driveConnected() || wasDriveConnected())) {
         clearTimeout(drivePushTimer.current);
-        drivePushTimer.current = setTimeout(() => {
+        drivePushTimer.current = setTimeout(async () => {
           setDriveState('syncing');
-          pushDrive(next)
-            .then(() => setDriveState('synced'))
-            .catch(() => setDriveState('error'));
+          try {
+            // Tokens expire hourly; renew silently (the grant already exists).
+            if (!driveConnected()) await connectDrive();
+            await pushDrive(next);
+            setDriveState('synced');
+          } catch {
+            setDriveState('reconnect');
+          }
         }, 2000);
       }
       return next;
