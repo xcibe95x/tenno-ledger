@@ -5,12 +5,18 @@ import { STATUS, STATUS_LABELS } from '../lib/mastery.js';
 
 const IMG = 'https://cdn.warframestat.us/img/';
 
-// Trackable parts: components that aren't generic crafting resources,
-// deduped (recipes needing 2x list the part twice).
+// Trackable parts: only components you actually farm from a drop table, deduped
+// (recipes needing 2x list the part twice). A chip's whole job is to check off a
+// part you've hunted, so anything without a drop location is skipped — the
+// bought/researched Blueprint, and the crafting resources WFCD mislabels as
+// components (Forma, Neurodes, Fieldron, Nitain…). Items built entirely from
+// those (market weapons, dojo/quest frames) simply show no chips: there's
+// nothing to farm, which the card's "where to get it" line already explains.
 function trackableParts(item) {
   const byId = new Map();
   for (const c of item.components ?? []) {
     if (c.type === 'Resource') continue;
+    if (!(c.drops ?? []).some(d => d.location)) continue;
     const prev = byId.get(c.uniqueName);
     if (prev) prev.count += c.itemCount ?? 1;
     else byId.set(c.uniqueName, { id: c.uniqueName, name: c.name, count: c.itemCount ?? 1, drops: c.drops ?? [] });
