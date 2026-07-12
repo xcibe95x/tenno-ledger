@@ -14,7 +14,7 @@ export default function FarmPlanner() {
     [items],
   );
 
-  const { farming, tiers, totalLeft, mr } = useMemo(() => {
+  const { farming, leveling, tiers, totalLeft, mr } = useMemo(() => {
     const { mr } = masterySummary(items ?? [], progress.status, progress.extraXp, progress.itemXp);
     const needle = q.trim().toLowerCase();
     const inCat = (items ?? []).filter(i =>
@@ -32,6 +32,14 @@ export default function FarmPlanner() {
       .map(i => ({ item: i, farm: farmInfo(i, mr) }))
       .sort(byPayoff);
 
+    // Owned items you're currently ranking up — surfaced here so once a farm
+    // finishes you can jump straight to marking it mastered. No farm info: it's
+    // already in your inventory. Highest mastery payoff first.
+    const leveling = inCat
+      .filter(i => (progress.status[i.id] ?? STATUS.MISSING) === STATUS.OWNED)
+      .map(i => ({ item: i }))
+      .sort((a, b) => b.item.totalXp - a.item.totalXp || a.item.name.localeCompare(b.item.name));
+
     // Everything not yet acquired, easiest first. Leveling/mastered items are
     // already in your inventory, so they no longer need farming.
     const scored = inCat
@@ -41,7 +49,7 @@ export default function FarmPlanner() {
     const tiers = new Map(TIER_ORDER.map(t => [t, []]));
     for (const s of scored) tiers.get(s.farm.tier)?.push(s);
 
-    return { farming, tiers, totalLeft: scored.length, mr };
+    return { farming, leveling, tiers, totalLeft: scored.length, mr };
   }, [items, progress.status, progress.extraXp, progress.itemXp, cat, q]);
 
   return (
@@ -70,6 +78,15 @@ export default function FarmPlanner() {
         </div>
       )}
 
+      {leveling.length > 0 && (
+        <div className="tier tier-leveling">
+          <h2 className="tier-title">Now leveling <span className="tier-count">{leveling.length}</span></h2>
+          <div className="grid">
+            {leveling.map(({ item }) => <ItemCard key={item.id} item={item} />)}
+          </div>
+        </div>
+      )}
+
       {TIER_ORDER.map(t => {
         const group = tiers.get(t) ?? [];
         if (!group.length) return null;
@@ -82,7 +99,7 @@ export default function FarmPlanner() {
           </div>
         );
       })}
-      {totalLeft === 0 && farming.length === 0 && (
+      {totalLeft === 0 && farming.length === 0 && leveling.length === 0 && (
         <p className="empty">
           {q.trim()
             ? `No unacquired items match “${q.trim()}”.`

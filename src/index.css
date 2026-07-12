@@ -243,6 +243,7 @@ a:hover { text-decoration: underline; }
   border-left: 3px solid var(--gold);
 }
 .tier-farming .tier-title { border-left-color: var(--keep); color: var(--keep); }
+.tier-leveling .tier-title { border-left-color: var(--energy); color: var(--energy); }
 .tier-easy .tier-title, .tier-trivial .tier-title { border-left-color: var(--ok); }
 .tier-moderate .tier-title { border-left-color: var(--energy); }
 .tier-hard .tier-title { border-left-color: var(--keep); }
