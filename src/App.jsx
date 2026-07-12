@@ -43,7 +43,14 @@ export default function App() {
           : TABS.find(t => t.key === tab)?.el}
       </main>
       <footer className="foot">
-        Not affiliated with Digital Extremes. Data: WFCD warframe-items · images: cdn.warframestat.us
+        <p>
+          Made by <a href="https://aboveconstraints.com" target="_blank" rel="noreferrer">Above Constraints</a> ·{' '}
+          <a className="foot-patreon" href="https://patreon.com/aboveconstraints" target="_blank" rel="noreferrer">Support on Patreon ♥</a>
+        </p>
+        <p>
+          Not affiliated with Warframe or Digital Extremes. Warframe and all related properties are trademarks of Digital Extremes Ltd.
+          Data: WFCD warframe-items · images: cdn.warframestat.us
+        </p>
       </footer>
     </div>
   );
