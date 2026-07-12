@@ -1,0 +1,184 @@
+import { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { STATUS, STATUS_COUNT } from './lib/mastery.js';
+import { supabase, fetchCloudProgress, pushCloudProgress } from './lib/supabase.js';
+import { driveEnabled, driveConnected, wasDriveConnected, connectDrive, disconnectDrive, pullDrive, pushDrive } from './lib/drive.js';
+
+const KEY = 'wfh-progress-v1';
+const VERSION = 2;
+const StoreContext = createContext(null);
+
+// v1 saves had 3 states (0 missing / 1 leveling / 2 mastered); v2 inserts
+// FARMING at 1, shifting leveling->2 and mastered->3.
+function migrate(p) {
+  if (!p || typeof p !== 'object' || typeof p.status !== 'object') return null;
+  const out = { status: { ...(p.status ?? {}) }, itemXp: p.itemXp ?? {}, extraXp: p.extraXp ?? 0, updatedAt: p.updatedAt ?? 0, v: VERSION };
+  if ((p.v ?? 1) < 2) {
+    for (const [id, s] of Object.entries(out.status)) {
+      if (s === 1) out.status[id] = STATUS.OWNED;
+      else if (s === 2) out.status[id] = STATUS.MASTERED;
+    }
+  }
+  return out;
+}
+
+function loadLocal() {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) {
+      const migrated = migrate(JSON.parse(raw));
+      if (migrated) return migrated;
+    }
+  } catch { /* corrupted save — start fresh */ }
+  return { status: {}, itemXp: {}, extraXp: 0, updatedAt: 0, v: VERSION };
+}
+
+export function StoreProvider({ children }) {
+  const [items, setItems] = useState(null);
+  const [nodes, setNodes] = useState({});
+  const [progress, setProgress] = useState(loadLocal);
+  const [user, setUser] = useState(null);
+  const [syncState, setSyncState] = useState(supabase ? 'idle' : 'off'); // off | idle | syncing | synced | error
+  const [driveState, setDriveState] = useState(driveEnabled ? (wasDriveConnected() ? 'reconnect' : 'idle') : 'off');
+  const pushTimer = useRef(null);
+  const drivePushTimer = useRef(null);
+
+  // Item data
+  useEffect(() => {
+    fetch(`${import.meta.env.BASE_URL}data/items.json`)
+      .then(r => r.json())
+      .then(d => { setItems(d.items); setNodes(d.nodes ?? {}); });
+  }, []);
+
+  // Persist locally on every change
+  useEffect(() => {
+    localStorage.setItem(KEY, JSON.stringify(progress));
+  }, [progress]);
+
+  // Supabase auth session tracking
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => setUser(session?.user ?? null));
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  // Supabase: on login pull cloud copy, newest wins, then push merged result
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      setSyncState('syncing');
+      try {
+        const cloud = await fetchCloudProgress(user.id);
+        if (cancelled) return;
+        const cloudTime = cloud ? Date.parse(cloud.updated_at) : 0;
+        const local = loadLocal();
+        if (cloud && cloudTime > (local.updatedAt || 0)) {
+          setProgress(migrate(cloud.data) ?? local);
+        } else {
+          await pushCloudProgress(user.id, local);
+        }
+        setSyncState('synced');
+      } catch (e) {
+        console.error('sync failed', e);
+        if (!cancelled) setSyncState('error');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user]);
+
+  const connectAndSyncDrive = useCallback(async () => {
+    setDriveState('syncing');
+    try {
+      await connectDrive();
+      const remote = await pullDrive();
+      const local = loadLocal();
+      if (remote && (remote.data?.updatedAt ?? remote.modifiedTime) > (local.updatedAt || 0)) {
+        setProgress(migrate(remote.data) ?? local);
+      } else {
+        await pushDrive(local);
+      }
+      setDriveState('synced');
+    } catch (e) {
+      console.error('drive sync failed', e);
+      setDriveState('error');
+      throw e;
+    }
+  }, []);
+
+  const signOutDrive = useCallback(() => {
+    disconnectDrive();
+    setDriveState('idle');
+  }, []);
+
+  const update = useCallback((fn) => {
+    setProgress(prev => {
+      const next = { ...fn(prev), updatedAt: Date.now(), v: VERSION };
+      if (user && supabase) {
+        clearTimeout(pushTimer.current);
+        pushTimer.current = setTimeout(() => {
+          setSyncState('syncing');
+          pushCloudProgress(user.id, next)
+            .then(() => setSyncState('synced'))
+            .catch(() => setSyncState('error'));
+        }, 1500);
+      }
+      if (driveConnected()) {
+        clearTimeout(drivePushTimer.current);
+        drivePushTimer.current = setTimeout(() => {
+          setDriveState('syncing');
+          pushDrive(next)
+            .then(() => setDriveState('synced'))
+            .catch(() => setDriveState('error'));
+        }, 2000);
+      }
+      return next;
+    });
+  }, [user]);
+
+  const setStatus = useCallback((id, s) => {
+    update(prev => ({ ...prev, status: { ...prev.status, [id]: s } }));
+  }, [update]);
+
+  const cycleStatus = useCallback((id) => {
+    update(prev => {
+      const cur = prev.status[id] ?? STATUS.MISSING;
+      return { ...prev, status: { ...prev.status, [id]: (cur + 1) % STATUS_COUNT } };
+    });
+  }, [update]);
+
+  const setAllStatuses = useCallback((statusMap) => {
+    update(prev => ({ ...prev, status: statusMap }));
+  }, [update]);
+
+  const applyImport = useCallback(({ status, itemXp, extraXp }) => {
+    update(prev => ({
+      ...prev,
+      status,
+      itemXp: { ...(prev.itemXp ?? {}), ...itemXp },
+      ...(extraXp != null ? { extraXp } : {}),
+    }));
+  }, [update]);
+
+  const setExtraXp = useCallback((xp) => {
+    update(prev => ({ ...prev, extraXp: Math.max(0, Math.floor(xp) || 0) }));
+  }, [update]);
+
+  const importProgress = useCallback((obj) => {
+    const migrated = migrate(obj);
+    if (!migrated) throw new Error('Not a valid backup file');
+    update(() => migrated);
+  }, [update]);
+
+  const value = useMemo(() => ({
+    items, nodes, progress, setStatus, cycleStatus, setExtraXp, importProgress, setAllStatuses, applyImport,
+    user, syncState, supabaseEnabled: !!supabase,
+    driveEnabled, driveState, connectAndSyncDrive, signOutDrive,
+  }), [items, nodes, progress, setStatus, cycleStatus, setExtraXp, importProgress, setAllStatuses, applyImport, user, syncState, driveState, connectAndSyncDrive, signOutDrive]);
+
+  return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
+}
+
+export function useStore() {
+  return useContext(StoreContext);
+}
