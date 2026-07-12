@@ -7,6 +7,7 @@ import ItemCard from './ItemCard.jsx';
 export default function FarmPlanner() {
   const { items, progress } = useStore();
   const [cat, setCat] = useState('all');
+  const [q, setQ] = useState('');
 
   const cats = useMemo(
     () => [...new Set((items ?? []).map(i => i.category))].sort(),
@@ -15,8 +16,11 @@ export default function FarmPlanner() {
 
   const { farming, tiers, totalLeft, mr } = useMemo(() => {
     const { mr } = masterySummary(items ?? [], progress.status, progress.extraXp, progress.itemXp);
+    const needle = q.trim().toLowerCase();
     const inCat = (items ?? []).filter(i =>
-      !i.unobtainable && (cat === 'all' || i.category === cat));
+      !i.unobtainable
+      && (cat === 'all' || i.category === cat)
+      && (!needle || i.name.toLowerCase().includes(needle)));
 
     // Easiest first; ties broken by mastery value so 6000 XP frames outrank
     // 3000 XP weapons of equal effort.
@@ -38,11 +42,15 @@ export default function FarmPlanner() {
     for (const s of scored) tiers.get(s.farm.tier)?.push(s);
 
     return { farming, tiers, totalLeft: scored.length, mr };
-  }, [items, progress.status, progress.extraXp, progress.itemXp, cat]);
+  }, [items, progress.status, progress.extraXp, progress.itemXp, cat, q]);
 
   return (
     <section>
       <div className="filters">
+        <input
+          className="inp inp-search" type="search" placeholder="Search equipment…"
+          value={q} onChange={e => setQ(e.target.value)} aria-label="Search equipment"
+        />
         <select className="inp" value={cat} onChange={e => setCat(e.target.value)} aria-label="Category">
           <option value="all">All categories</option>
           {cats.map(c => <option key={c} value={c}>{c}</option>)}
@@ -75,7 +83,11 @@ export default function FarmPlanner() {
         );
       })}
       {totalLeft === 0 && farming.length === 0 && (
-        <p className="empty">Nothing left to hunt here — everything is acquired or mastered. Go touch grass, Tenno.</p>
+        <p className="empty">
+          {q.trim()
+            ? `No unacquired items match “${q.trim()}”.`
+            : 'Nothing left to hunt here — everything is acquired or mastered. Go touch grass, Tenno.'}
+        </p>
       )}
     </section>
   );
