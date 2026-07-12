@@ -1,8 +1,18 @@
 // Heuristic farming difficulty. Lower score = easier to obtain.
 // Ordering: market blueprints < guaranteed/likely drops < dojo research <
 // vendors/quests < low-chance grinds < Prime relics < vaulted Primes.
-// Drop-based difficulty uses estimated runs: sum of 1/chance over the best
-// drop of each part, so one 2% part correctly outweighs three 38% parts.
+//
+// The score is the recipe cost (how you get the blueprint) PLUS the part-farm
+// cost (how hard the crafted parts are to drop). Part-farm difficulty uses
+// estimated runs — sum of 1/chance over the best drop of each part — so one 2%
+// part correctly outweighs three 38% parts, and a market blueprint whose parts
+// only drop from a rare rotation is NOT treated as a quick pickup.
+//
+// Two data traps the part-farm cost must ignore, or easy market weapons look
+// brutal: (1) the main "Blueprint" component often lists a spurious low-chance
+// alt-source even though you just buy it (bpCost) — skip it when buyable; and
+// (2) ingredient weapons (Akbronco needs 2× Bronco) appear as components with
+// junk drops — they are priced separately via weaponIngredients, not farmed.
 
 const TIERS = [
   { max: 15, key: 'trivial', label: 'Quick pickups' },
@@ -24,14 +34,21 @@ function cleanLoc(loc = '') {
     .trim();
 }
 
-// Best drop per part (components first, else the item's own drops).
+// Best drop per farmed part. Excludes two false "farms": the main Blueprint
+// when it's buyable on the market (bpCost), and ingredient weapons that are
+// crafted separately. Falls back to the item's own drops only when nothing is
+// buyable, so a directly-purchasable weapon never inherits a junk alt-source.
 function collectSources(item) {
+  const ingredients = new Set((item.weaponIngredients ?? []).map(w => w.name));
   const sources = [];
   for (const c of item.components ?? []) {
     const d = c.drops?.[0];
-    if (d?.location) sources.push({ loc: cleanLoc(d.location), chance: norm(d.chance) });
+    if (!d?.location) continue;
+    if (c.name === 'Blueprint' && item.bpCost) continue; // buy it, don't farm it
+    if (ingredients.has(c.name)) continue;               // built weapon, priced below
+    sources.push({ loc: cleanLoc(d.location), chance: norm(d.chance) });
   }
-  if (sources.length === 0) {
+  if (sources.length === 0 && !item.bpCost) {
     for (const d of (item.drops ?? []).slice(0, 2)) {
       if (d?.location) sources.push({ loc: cleanLoc(d.location), chance: norm(d.chance) });
     }
@@ -68,14 +85,26 @@ export function isBaroExclusive(item) {
   return /^(Prisma|Mara)\s/.test(item.name);
 }
 
-export function farmInfo(item) {
+export function farmInfo(item, userMr = null) {
   if (item.unobtainable) {
     return { score: Infinity, tier: 'unobtainable', tierLabel: 'Unobtainable', reason: 'Founders exclusive — no longer acquirable', where: null };
   }
   let score = (item.masteryReq ?? 0) * 1.5;
+  // Above the player's rank it can't be claimed from the foundry yet, so it
+  // is never a "quick pickup" no matter how easy the farm is.
+  const mrLocked = userMr != null && (item.masteryReq ?? 0) > userMr;
+  if (mrLocked) score += 25;
   let reason;
   let where = null;
   const sources = collectSources(item);
+
+  // Part-farm cost: expected runs to see every farmed part drop once. One 2%
+  // part outweighs three 40% parts. Zero when the parts are bought or built.
+  const chances = sources.map(s => s.chance).filter(c => c != null && c > 0);
+  const runs = chances.length ? chances.reduce((sum, c) => sum + 1 / c, 0) : 0;
+  const partScore = Math.min(60, runs * 1.1);
+  const grindy = chances.length > 0 && runs > chances.length + 0.5;
+  const runsTxt = `about ${Math.ceil(runs)} runs to farm the parts`;
 
   if (item.isPrime) {
     // Component drop locations for primes are the relics themselves.
@@ -93,33 +122,35 @@ export function farmInfo(item) {
     reason = "Baro Ki'Teer exclusive — buy with ducats + credits when his rotation brings it";
     where = 'Void Trader, every 2 weeks at a relay';
   } else if (isDojoResearch(item)) {
-    score += 22;
+    score += 22 + partScore;
     reason = 'Clan dojo research — replicate the blueprint from your dojo lab';
-  } else if (item.bpCost) {
-    score += 5;
-    reason = `Blueprint on the market for ${item.bpCost.toLocaleString()} credits`;
-    where = whereText(sources.filter(s => s.chance != null), 2);
-    if (where) where = `Parts: ${where}`;
-  } else {
-    const chances = sources.map(s => s.chance).filter(c => c != null && c > 0);
+    if (grindy) reason += ` · ${runsTxt}`;
     where = whereText(sources);
-    if (chances.length) {
-      // Expected total runs to see every part drop once.
-      const runs = chances.reduce((sum, c) => sum + 1 / c, 0);
-      score += Math.min(70, 8 + runs * 1.1);
-      reason = runs <= chances.length + 0.5
-        ? 'Guaranteed drops — one run per part'
-        : `Farmed drops — roughly ${Math.ceil(runs)} runs for all parts`;
-    } else {
-      score += 40;
-      reason = 'Quest, vendor or bundle reward — see the wiki page';
-    }
+    if (where) where = `Parts: ${where}`;
+  } else if (item.bpCost) {
+    score += 5 + partScore;
+    reason = `Blueprint on the market for ${item.bpCost.toLocaleString()} credits`;
+    if (chances.length) reason += grindy ? ` · ${runsTxt}` : ' · parts drop reliably';
+    where = whereText(sources);
+    if (where) where = `Parts: ${where}`;
+  } else if (chances.length) {
+    where = whereText(sources);
+    score += 8 + partScore;
+    reason = grindy
+      ? `Farmed drops — ${runsTxt}`
+      : 'Guaranteed drops — one run per part';
+  } else {
+    score += 40;
+    reason = 'Quest, vendor or bundle reward — see the wiki page';
   }
 
   if (item.weaponIngredients?.length) {
     const parts = item.weaponIngredients.map(w => `${w.count}× ${w.name}`).join(', ');
     reason += ` · also needs ${parts} built`;
     score += 6 * item.weaponIngredients.length;
+  }
+  if (mrLocked) {
+    reason = `Locked until MR ${item.masteryReq} · ${reason}`;
   }
 
   const tier = TIERS.find(t => score <= t.max);

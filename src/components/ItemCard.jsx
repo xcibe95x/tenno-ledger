@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useStore } from '../store.jsx';
 import { STATUS, STATUS_LABELS } from '../lib/mastery.js';
 
@@ -16,23 +18,24 @@ function trackableParts(item) {
   return [...byId.values()];
 }
 
-function partTooltip(p) {
-  if (!p.drops.length) return `${p.name} — see the wiki for sources`;
-  const locs = p.drops.map(d => {
-    const chance = d.chance != null ? ` (${((d.chance > 1 ? d.chance / 100 : d.chance) * 100).toFixed(1)}%)` : '';
-    return `${d.location}${chance}`;
-  });
-  return `${p.name} drops from:\n${locs.join('\n')}`;
+function chancePct(chance) {
+  if (chance == null) return null;
+  const c = chance > 1 ? chance / 100 : chance;
+  return `${(c * 100).toFixed(c < 0.1 ? 1 : 0)}%`;
 }
 
 export default function ItemCard({ item, farm }) {
   const { progress, cycleStatus, togglePart } = useStore();
   const st = progress.status[item.id] ?? STATUS.MISSING;
+  const keepFor = (item.ingredientFor ?? []).filter(f => (progress.status[f.id] ?? 0) < STATUS.OWNED);
   const parts = farm ? trackableParts(item) : [];
   const owned = progress.parts?.[item.id] ?? {};
-  // Once the crafted weapon is owned (built or bought), the ingredient has
-  // already served its purpose — only unowned recipes keep the flag alive.
-  const keepFor = (item.ingredientFor ?? []).filter(f => (progress.status[f.id] ?? 0) < STATUS.OWNED);
+  const [tip, setTip] = useState(null);
+
+  const showTip = (e, p) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    setTip({ x: r.left + r.width / 2, y: r.top - 8, part: p });
+  };
 
   return (
     <article className={`card st-${st}`}>
@@ -80,12 +83,39 @@ export default function ItemCard({ item, farm }) {
               key={p.id}
               className={`part-chip ${owned[p.id] ? 'part-owned' : ''}`}
               onClick={(e) => { e.stopPropagation(); togglePart(item.id, p.id); }}
-              title={partTooltip(p)}
+              onMouseEnter={(e) => showTip(e, p)}
+              onMouseLeave={() => setTip(null)}
+              onFocus={(e) => showTip(e, p)}
+              onBlur={() => setTip(null)}
             >
               {owned[p.id] ? '✓ ' : ''}{p.count > 1 ? `${p.count}× ` : ''}{p.name}
             </button>
           ))}
         </div>
+      )}
+      {tip && createPortal(
+        <div
+          className="tipbox"
+          style={{
+            left: Math.min(Math.max(tip.x, 150), window.innerWidth - 150),
+            top: Math.max(tip.y, 60),
+          }}
+        >
+          <div className="tipbox-title">
+            {tip.part.count > 1 ? `${tip.part.count}× ` : ''}{tip.part.name}
+            <span className="tipbox-state">{owned[tip.part.id] ? ' — acquired ✓' : ' — click to mark acquired'}</span>
+          </div>
+          {tip.part.drops.length > 0 ? (
+            tip.part.drops.map((d, i) => (
+              <div key={i} className="tipbox-line">
+                {d.location}{d.chance != null && <b> {chancePct(d.chance)}</b>}
+              </div>
+            ))
+          ) : (
+            <div className="tipbox-line">Comes with the blueprint or vendor purchase — see the wiki</div>
+          )}
+        </div>,
+        document.body,
       )}
     </article>
   );

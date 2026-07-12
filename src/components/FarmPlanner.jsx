@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useStore } from '../store.jsx';
-import { STATUS } from '../lib/mastery.js';
+import { STATUS, masterySummary } from '../lib/mastery.js';
 import { farmInfo, TIER_ORDER, TIER_LABELS } from '../lib/farming.js';
 import ItemCard from './ItemCard.jsx';
 
@@ -13,27 +13,32 @@ export default function FarmPlanner() {
     [items],
   );
 
-  const { farming, tiers, totalLeft } = useMemo(() => {
+  const { farming, tiers, totalLeft, mr } = useMemo(() => {
+    const { mr } = masterySummary(items ?? [], progress.status, progress.extraXp, progress.itemXp);
     const inCat = (items ?? []).filter(i =>
       !i.unobtainable && (cat === 'all' || i.category === cat));
+
+    // Easiest first; ties broken by mastery value so 6000 XP frames outrank
+    // 3000 XP weapons of equal effort.
+    const byPayoff = (a, b) => a.farm.score - b.farm.score || b.item.totalXp - a.item.totalXp;
 
     // Items you actively marked as being hunted right now — the to-do list.
     const farming = inCat
       .filter(i => (progress.status[i.id] ?? STATUS.MISSING) === STATUS.FARMING)
-      .map(i => ({ item: i, farm: farmInfo(i) }))
-      .sort((a, b) => a.farm.score - b.farm.score);
+      .map(i => ({ item: i, farm: farmInfo(i, mr) }))
+      .sort(byPayoff);
 
     // Everything not yet acquired, easiest first. Leveling/mastered items are
     // already in your inventory, so they no longer need farming.
     const scored = inCat
       .filter(i => (progress.status[i.id] ?? STATUS.MISSING) === STATUS.MISSING)
-      .map(i => ({ item: i, farm: farmInfo(i) }))
-      .sort((a, b) => a.farm.score - b.farm.score);
+      .map(i => ({ item: i, farm: farmInfo(i, mr) }))
+      .sort(byPayoff);
     const tiers = new Map(TIER_ORDER.map(t => [t, []]));
     for (const s of scored) tiers.get(s.farm.tier)?.push(s);
 
-    return { farming, tiers, totalLeft: scored.length };
-  }, [items, progress.status, cat]);
+    return { farming, tiers, totalLeft: scored.length, mr };
+  }, [items, progress.status, progress.extraXp, progress.itemXp, cat]);
 
   return (
     <section>
@@ -43,7 +48,8 @@ export default function FarmPlanner() {
           {cats.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
         <span className="filters-count">
-          {totalLeft} items left to hunt, easiest first. Tap a card and set it to "Farming" to pin it to your to-do list.
+          {totalLeft} items left to hunt, easiest first for MR {mr}. Items above your rank sink lower — you couldn't claim them yet.
+          Tap a card and set it to "Farming" to pin it to your to-do list.
         </span>
       </div>
 
