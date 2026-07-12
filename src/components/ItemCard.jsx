@@ -5,23 +5,26 @@ import { STATUS, STATUS_LABELS } from '../lib/mastery.js';
 
 const IMG = 'https://cdn.warframestat.us/img/';
 
-// Trackable parts: only components you actually farm from a drop table, deduped
-// (recipes needing 2x list the part twice). A chip's whole job is to check off a
-// part you've hunted, so anything without a drop location is skipped — the
-// bought/researched Blueprint, and the crafting resources WFCD mislabels as
-// components (Forma, Neurodes, Fieldron, Nitain…). Items built entirely from
-// those (market weapons, dojo/quest frames) simply show no chips: there's
-// nothing to farm, which the card's "where to get it" line already explains.
-function trackableParts(item) {
-  const byId = new Map();
+// The foundry recipe, deduped (recipes needing 2x list the part twice) and
+// split in two:
+//   parts     — components you farm from a drop table: checkable, with drop
+//               tooltips. This is the hunt checklist.
+//   materials — the blueprint plus every crafting resource/mineral. Shown for
+//               reference with their icons and quantities; not checkable,
+//               since you buy or bulk-grind them rather than hunt them.
+// Items built entirely from materials (market weapons, dojo/quest frames) have
+// no parts to farm, which the card's "where to get it" line already explains.
+function recipe(item) {
+  const parts = new Map();
+  const materials = new Map();
   for (const c of item.components ?? []) {
-    if (c.type === 'Resource') continue;
-    if (!(c.drops ?? []).some(d => d.location)) continue;
-    const prev = byId.get(c.uniqueName);
+    const farmable = c.type !== 'Resource' && (c.drops ?? []).some(d => d.location);
+    const bucket = farmable ? parts : materials;
+    const prev = bucket.get(c.uniqueName);
     if (prev) prev.count += c.itemCount ?? 1;
-    else byId.set(c.uniqueName, { id: c.uniqueName, name: c.name, count: c.itemCount ?? 1, drops: c.drops ?? [] });
+    else bucket.set(c.uniqueName, { id: c.uniqueName, name: c.name, count: c.itemCount ?? 1, imageName: c.imageName ?? null, drops: c.drops ?? [] });
   }
-  return [...byId.values()];
+  return { parts: [...parts.values()], materials: [...materials.values()] };
 }
 
 function chancePct(chance) {
@@ -34,7 +37,7 @@ export default function ItemCard({ item, farm }) {
   const { progress, cycleStatus, togglePart } = useStore();
   const st = progress.status[item.id] ?? STATUS.MISSING;
   const keepFor = (item.ingredientFor ?? []).filter(f => (progress.status[f.id] ?? 0) < STATUS.OWNED);
-  const parts = farm ? trackableParts(item) : [];
+  const { parts, materials } = farm ? recipe(item) : { parts: [], materials: [] };
   const owned = progress.parts?.[item.id] ?? {};
   const [tip, setTip] = useState(null);
 
@@ -94,8 +97,21 @@ export default function ItemCard({ item, farm }) {
               onFocus={(e) => showTip(e, p)}
               onBlur={() => setTip(null)}
             >
-              {owned[p.id] ? '✓ ' : ''}{p.count > 1 ? `${p.count}× ` : ''}{p.name}
+              {owned[p.id]
+                ? <span className="chip-check">✓</span>
+                : p.imageName && <img className="chip-icon" loading="lazy" src={IMG + p.imageName} alt="" />}
+              {p.count > 1 ? `${p.count}× ` : ''}{p.name}
             </button>
+          ))}
+        </div>
+      )}
+      {materials.length > 0 && (
+        <div className="card-parts card-materials">
+          {materials.map(m => (
+            <span key={m.id} className="part-chip part-mat" title={`${m.count > 1 ? `${m.count.toLocaleString()}× ` : ''}${m.name}`}>
+              {m.imageName && <img className="chip-icon" loading="lazy" src={IMG + m.imageName} alt="" />}
+              {m.count > 1 ? `${m.count.toLocaleString()}× ` : ''}{m.name}
+            </span>
           ))}
         </div>
       )}

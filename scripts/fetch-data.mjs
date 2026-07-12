@@ -71,6 +71,7 @@ function trimComponent(c) {
     name: c.name,
     itemCount: c.itemCount ?? 1,
     type: c.type ?? null,
+    imageName: c.imageName ?? null,
     drops: bestDrops(c.drops, 3),
   };
 }

@@ -206,7 +206,8 @@ a:hover { text-decoration: underline; }
   padding: 0 12px 10px;
 }
 .part-chip {
-  font-size: 11px; padding: 3px 8px;
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; padding: 3px 8px 3px 5px;
   color: var(--muted); background: var(--panel-2);
   border: 1px solid var(--line);
   clip-path: polygon(4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%, 0 4px);
@@ -214,6 +215,13 @@ a:hover { text-decoration: underline; }
 }
 .part-chip:hover { border-color: var(--gold-dim); color: var(--text); }
 .part-owned { color: var(--ok); border-color: rgba(125, 201, 143, 0.45); background: rgba(125, 201, 143, 0.08); }
+.chip-icon { width: 16px; height: 16px; flex: none; object-fit: contain; opacity: 0.9; }
+.chip-check { width: 16px; text-align: center; color: var(--ok); font-weight: 700; }
+
+/* build materials (blueprint + resources) — reference only, not a checklist */
+.card-materials { margin-top: -4px; opacity: 0.85; }
+.part-mat { cursor: default; }
+.part-mat:hover { border-color: var(--line); color: var(--muted); }
 
 /* part drop overlay */
 .tipbox {
