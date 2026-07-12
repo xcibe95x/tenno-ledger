@@ -85,10 +85,17 @@ console.log('Fetching item data from WFCD/warframe-items ...');
 const raw = (await Promise.all(FILES.map(fetchJson))).flat();
 console.log(`Fetched ${raw.length} raw items`);
 
+// Entries that duplicate another mastery item. The Orion/Sirius twins are one
+// warframe in-game (6000 mastery once, tracked on the Sirius suit).
+const EXCLUDED_IDS = new Set([
+  '/Lotus/Powersuits/SiriusOrion/OrionSuit',
+]);
+
 const seen = new Set();
 const items = [];
 for (const it of raw) {
   if (!it.masterable && !MASTERABLE_OVERRIDES.has(it.name)) continue;
+  if (EXCLUDED_IDS.has(it.uniqueName)) continue;
   if (seen.has(it.uniqueName)) continue;
   seen.add(it.uniqueName);
   const { perRank, maxRank, totalXp } = xpInfo(it);

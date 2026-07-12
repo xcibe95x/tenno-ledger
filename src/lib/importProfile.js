@@ -9,13 +9,20 @@
 
 import { STATUS, xpForMr } from './mastery.js';
 
+// Game entries that map onto a different item in our list (e.g. the
+// Orion/Sirius twins are tracked as a single warframe).
+const ALIASES = {
+  '/Lotus/Powersuits/SiriusOrion/OrionSuit': '/Lotus/Powersuits/SiriusOrion/SiriusSuit',
+};
+
 function collectXp(profile) {
   const root = profile?.Results?.[0];
   if (!root) throw new Error('Not a profile JSON — expected a "Results" array. Copy the whole page.');
   const xpByType = new Map();
   const add = (type, xp) => {
     if (!type || typeof xp !== 'number') return;
-    const clean = type.replace(/_Primary$/, '');
+    let clean = type.replace(/_Primary$/, '');
+    clean = ALIASES[clean] ?? clean;
     xpByType.set(clean, Math.max(xpByType.get(clean) ?? 0, xp));
   };
   for (const e of root.LoadOutInventory?.XPInfo ?? []) add(e.ItemType, e.XP);
