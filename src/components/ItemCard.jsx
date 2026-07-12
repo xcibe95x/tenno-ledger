@@ -3,9 +3,33 @@ import { STATUS, STATUS_LABELS } from '../lib/mastery.js';
 
 const IMG = 'https://cdn.warframestat.us/img/';
 
+// Trackable parts: components that aren't generic crafting resources,
+// deduped (recipes needing 2x list the part twice).
+function trackableParts(item) {
+  const byId = new Map();
+  for (const c of item.components ?? []) {
+    if (c.type === 'Resource') continue;
+    const prev = byId.get(c.uniqueName);
+    if (prev) prev.count += c.itemCount ?? 1;
+    else byId.set(c.uniqueName, { id: c.uniqueName, name: c.name, count: c.itemCount ?? 1, drops: c.drops ?? [] });
+  }
+  return [...byId.values()];
+}
+
+function partTooltip(p) {
+  if (!p.drops.length) return `${p.name} — see the wiki for sources`;
+  const locs = p.drops.map(d => {
+    const chance = d.chance != null ? ` (${((d.chance > 1 ? d.chance / 100 : d.chance) * 100).toFixed(1)}%)` : '';
+    return `${d.location}${chance}`;
+  });
+  return `${p.name} drops from:\n${locs.join('\n')}`;
+}
+
 export default function ItemCard({ item, farm }) {
-  const { progress, cycleStatus } = useStore();
+  const { progress, cycleStatus, togglePart } = useStore();
   const st = progress.status[item.id] ?? STATUS.MISSING;
+  const parts = farm ? trackableParts(item) : [];
+  const owned = progress.parts?.[item.id] ?? {};
   // Once the crafted weapon is owned (built or bought), the ingredient has
   // already served its purpose — only unowned recipes keep the flag alive.
   const keepFor = (item.ingredientFor ?? []).filter(f => (progress.status[f.id] ?? 0) < STATUS.OWNED);
@@ -47,6 +71,20 @@ export default function ItemCard({ item, farm }) {
             {farm.where && <span className="farm-where">{farm.where}</span>}
           </p>
           {item.wikiaUrl && <a href={item.wikiaUrl} target="_blank" rel="noreferrer">wiki ↗</a>}
+        </div>
+      )}
+      {parts.length > 0 && (
+        <div className="card-parts">
+          {parts.map(p => (
+            <button
+              key={p.id}
+              className={`part-chip ${owned[p.id] ? 'part-owned' : ''}`}
+              onClick={(e) => { e.stopPropagation(); togglePart(item.id, p.id); }}
+              title={partTooltip(p)}
+            >
+              {owned[p.id] ? '✓ ' : ''}{p.count > 1 ? `${p.count}× ` : ''}{p.name}
+            </button>
+          ))}
         </div>
       )}
     </article>

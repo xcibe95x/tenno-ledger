@@ -201,6 +201,20 @@ a:hover { text-decoration: underline; }
 .card-farm a { flex: none; }
 .farm-where { display: block; margin-top: 3px; color: var(--energy); font-size: 12px; }
 
+.card-parts {
+  display: flex; flex-wrap: wrap; gap: 5px;
+  padding: 0 12px 10px;
+}
+.part-chip {
+  font-size: 11px; padding: 3px 8px;
+  color: var(--muted); background: var(--panel-2);
+  border: 1px solid var(--line);
+  clip-path: polygon(4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%, 0 4px);
+  cursor: pointer;
+}
+.part-chip:hover { border-color: var(--gold-dim); color: var(--text); }
+.part-owned { color: var(--ok); border-color: rgba(125, 201, 143, 0.45); background: rgba(125, 201, 143, 0.08); }
+
 /* ---------- farm planner tiers ---------- */
 .tier { margin-bottom: 30px; }
 .tier-title {

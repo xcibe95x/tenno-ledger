@@ -11,7 +11,7 @@ const StoreContext = createContext(null);
 // FARMING at 1, shifting leveling->2 and mastered->3.
 function migrate(p) {
   if (!p || typeof p !== 'object' || typeof p.status !== 'object') return null;
-  const out = { status: { ...(p.status ?? {}) }, itemXp: p.itemXp ?? {}, extraXp: p.extraXp ?? 0, updatedAt: p.updatedAt ?? 0, v: VERSION };
+  const out = { status: { ...(p.status ?? {}) }, itemXp: p.itemXp ?? {}, parts: p.parts ?? {}, extraXp: p.extraXp ?? 0, updatedAt: p.updatedAt ?? 0, v: VERSION };
   if ((p.v ?? 1) < 2) {
     for (const [id, s] of Object.entries(out.status)) {
       if (s === 1) out.status[id] = STATUS.OWNED;
@@ -29,7 +29,7 @@ function loadLocal() {
       if (migrated) return migrated;
     }
   } catch { /* corrupted save — start fresh */ }
-  return { status: {}, itemXp: {}, extraXp: 0, updatedAt: 0, v: VERSION };
+  return { status: {}, itemXp: {}, parts: {}, extraXp: 0, updatedAt: 0, v: VERSION };
 }
 
 export function StoreProvider({ children }) {
@@ -174,6 +174,15 @@ export function StoreProvider({ children }) {
     update(prev => ({ ...prev, status: statusMap }));
   }, [update]);
 
+  const togglePart = useCallback((itemId, partId) => {
+    update(prev => {
+      const itemParts = { ...(prev.parts?.[itemId] ?? {}) };
+      if (itemParts[partId]) delete itemParts[partId];
+      else itemParts[partId] = true;
+      return { ...prev, parts: { ...(prev.parts ?? {}), [itemId]: itemParts } };
+    });
+  }, [update]);
+
   const applyImport = useCallback(({ status, itemXp, extraXp }) => {
     update(prev => ({
       ...prev,
@@ -194,10 +203,10 @@ export function StoreProvider({ children }) {
   }, [update]);
 
   const value = useMemo(() => ({
-    items, nodes, progress, setStatus, cycleStatus, setExtraXp, importProgress, setAllStatuses, applyImport,
+    items, nodes, progress, setStatus, cycleStatus, setExtraXp, importProgress, setAllStatuses, applyImport, togglePart,
     user, syncState, supabaseEnabled: !!supabase,
     driveEnabled, driveState, connectAndSyncDrive, signOutDrive,
-  }), [items, nodes, progress, setStatus, cycleStatus, setExtraXp, importProgress, setAllStatuses, applyImport, user, syncState, driveState, connectAndSyncDrive, signOutDrive]);
+  }), [items, nodes, progress, setStatus, cycleStatus, setExtraXp, importProgress, setAllStatuses, applyImport, togglePart, user, syncState, driveState, connectAndSyncDrive, signOutDrive]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
