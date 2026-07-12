@@ -6,7 +6,9 @@ const IMG = 'https://cdn.warframestat.us/img/';
 export default function ItemCard({ item, farm }) {
   const { progress, cycleStatus } = useStore();
   const st = progress.status[item.id] ?? STATUS.MISSING;
-  const keepFor = (item.ingredientFor ?? []).filter(f => (progress.status[f.id] ?? 0) !== STATUS.MASTERED);
+  // Once the crafted weapon is owned (built or bought), the ingredient has
+  // already served its purpose — only unowned recipes keep the flag alive.
+  const keepFor = (item.ingredientFor ?? []).filter(f => (progress.status[f.id] ?? 0) < STATUS.OWNED);
 
   return (
     <article className={`card st-${st}`}>

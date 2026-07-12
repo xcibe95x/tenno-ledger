@@ -16,10 +16,11 @@ export default function KeepList() {
       .map(i => {
         const uses = i.ingredientFor.map(f => ({
           ...f,
-          mastered: (progress.status[f.id] ?? STATUS.MISSING) === STATUS.MASTERED,
+          // Owned or beyond: the recipe already consumed its ingredient
+          satisfied: (progress.status[f.id] ?? STATUS.MISSING) >= STATUS.OWNED,
           item: byId.get(f.id),
         }));
-        const pending = uses.filter(u => !u.mastered);
+        const pending = uses.filter(u => !u.satisfied);
         return { item: i, uses, pending, keep: pending.length > 0 };
       })
       .sort((a, b) => Number(b.keep) - Number(a.keep) || a.item.name.localeCompare(b.item.name));
@@ -29,7 +30,8 @@ export default function KeepList() {
     <section>
       <p className="keep-intro">
         These weapons are ingredients for other weapons. Never sell one marked <strong>KEEP</strong> —
-        you will have to re-farm or re-buy it later. Once everything it builds is mastered, it flips to safe.
+        you will have to re-farm or re-buy it later. Once everything it builds is in your inventory
+        (owned, leveling or mastered), it flips to safe.
       </p>
       <div className="keep-table">
         {rows.map(({ item, uses, keep }) => (
@@ -39,8 +41,8 @@ export default function KeepList() {
               <span className="keep-name">{item.name}</span>
               <span className="keep-uses">
                 {uses.map((u, i) => (
-                  <span key={u.id + i} className={u.mastered ? 'use-done' : 'use-pending'}>
-                    {u.count}× → {u.name}{u.mastered ? ' ✓' : ''}{i < uses.length - 1 ? '  ·  ' : ''}
+                  <span key={u.id + i} className={u.satisfied ? 'use-done' : 'use-pending'}>
+                    {u.count}× → {u.name}{u.satisfied ? ' ✓' : ''}{i < uses.length - 1 ? '  ·  ' : ''}
                   </span>
                 ))}
               </span>
