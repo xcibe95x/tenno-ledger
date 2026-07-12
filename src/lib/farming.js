@@ -63,6 +63,11 @@ export function isDojoResearch(item) {
   return item.id.includes('/ClanTech/') && !item.name.endsWith('Vandal');
 }
 
+// Baro Ki'Teer exclusives — only purchasable during his biweekly visits.
+export function isBaroExclusive(item) {
+  return /^(Prisma|Mara)\s/.test(item.name);
+}
+
 export function farmInfo(item) {
   if (item.unobtainable) {
     return { score: Infinity, tier: 'unobtainable', tierLabel: 'Unobtainable', reason: 'Founders exclusive — no longer acquirable', where: null };
@@ -83,6 +88,10 @@ export function farmInfo(item) {
       score += 55;
       reason = 'Prime — farm and crack the relics';
     }
+  } else if (isBaroExclusive(item)) {
+    score += 50;
+    reason = "Baro Ki'Teer exclusive — buy with ducats + credits when his rotation brings it";
+    where = 'Void Trader, every 2 weeks at a relay';
   } else if (isDojoResearch(item)) {
     score += 22;
     reason = 'Clan dojo research — replicate the blueprint from your dojo lab';

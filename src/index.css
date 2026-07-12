@@ -108,6 +108,28 @@ a:hover { text-decoration: underline; }
 .import-ok { color: var(--ok); font-size: 13px; margin-top: 10px; }
 .import-err { color: var(--danger); font-size: 13px; margin-top: 10px; }
 
+/* ---------- world clock ---------- */
+.worldclock {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  margin-top: 10px;
+}
+.wc-chip {
+  font-family: var(--font-display); font-size: 11.5px; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 4px 10px; color: var(--muted);
+  background: var(--panel); border: 1px solid var(--line);
+  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+  white-space: nowrap;
+}
+.wc-chip b { color: var(--text); font-weight: 600; }
+.wc-hot { color: var(--energy); border-color: rgba(92, 200, 220, 0.4); }
+.wc-hot b { color: var(--energy); }
+
+@media (max-width: 760px) {
+  .worldclock { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .worldclock::-webkit-scrollbar { display: none; }
+}
+
 /* ---------- tabs ---------- */
 .tabs { display: flex; gap: 4px; margin: 22px 0 18px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
 .tab {
@@ -234,9 +256,10 @@ a:hover { text-decoration: underline; }
   letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold);
   margin-bottom: 8px;
 }
-.panel p, .panel ol { color: var(--muted); font-size: 13.5px; margin-bottom: 10px; }
+.panel p, .panel ol { color: var(--muted); font-size: 13.5px; margin-bottom: 10px; overflow-wrap: anywhere; }
 .panel ol { padding-left: 20px; }
-.panel code { color: var(--energy); font-size: 12.5px; }
+.panel code { color: var(--energy); font-size: 12.5px; word-break: break-all; }
+.panel { min-width: 0; overflow: hidden; }
 .row { display: flex; gap: 10px; flex-wrap: wrap; }
 
 /* ---------- misc ---------- */
@@ -272,6 +295,8 @@ a:hover { text-decoration: underline; }
   .verdict { margin-left: 58px; }
   .settings { max-width: none; }
   .panel { padding: 14px; }
+  .panel ol { padding-left: 16px; }
+  .row .btn { flex: 1; }
   .btn { padding: 10px 14px; }
 }
 

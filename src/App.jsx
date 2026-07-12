@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useStore } from './store.jsx';
 import Header from './components/Header.jsx';
+import WorldClock from './components/WorldClock.jsx';
 import Collection from './components/Collection.jsx';
 import FarmPlanner from './components/FarmPlanner.jsx';
 import KeepList from './components/KeepList.jsx';
@@ -26,6 +27,7 @@ export default function App() {
   return (
     <div className="app">
       <Header />
+      <WorldClock />
       <nav className="tabs" role="tablist" aria-label="Sections">
         {TABS.map(t => (
           <button
