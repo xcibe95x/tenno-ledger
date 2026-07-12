@@ -177,6 +177,7 @@ a:hover { text-decoration: underline; }
   display: flex; gap: 10px; justify-content: space-between; align-items: baseline;
 }
 .card-farm a { flex: none; }
+.farm-where { display: block; margin-top: 3px; color: var(--energy); font-size: 12px; }
 
 /* ---------- farm planner tiers ---------- */
 .tier { margin-bottom: 30px; }

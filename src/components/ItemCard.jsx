@@ -42,7 +42,10 @@ export default function ItemCard({ item, farm }) {
       </button>
       {farm && (
         <div className="card-farm">
-          <p>{farm.reason}</p>
+          <p>
+            {farm.reason}
+            {farm.where && <span className="farm-where">{farm.where}</span>}
+          </p>
           {item.wikiaUrl && <a href={item.wikiaUrl} target="_blank" rel="noreferrer">wiki ↗</a>}
         </div>
       )}
