@@ -111,6 +111,33 @@ export function StoreProvider({ children }) {
     setDriveState('idle');
   }, []);
 
+  // On load the in-memory token is gone, so re-acquire one silently: the grant
+  // from a previous session lets Google mint a fresh token with no popup. If
+  // that's blocked (revoked grant, partitioned storage), fall back to the
+  // visible reconnect button instead of leaving the user disconnected.
+  useEffect(() => {
+    if (!driveEnabled || !wasDriveConnected()) return;
+    let cancelled = false;
+    (async () => {
+      setDriveState('syncing');
+      try {
+        await connectDrive();
+        const remote = await pullDrive();
+        if (cancelled) return;
+        const local = loadLocal();
+        if (remote && (remote.data?.updatedAt ?? remote.modifiedTime) > (local.updatedAt || 0)) {
+          setProgress(migrate(remote.data) ?? local);
+        } else {
+          await pushDrive(local);
+        }
+        if (!cancelled) setDriveState('synced');
+      } catch {
+        if (!cancelled) setDriveState('reconnect');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   // Keep the Drive session alive while the page is open: renew the hourly
   // token shortly after it lapses, falling back to a visible reconnect state.
   useEffect(() => {
