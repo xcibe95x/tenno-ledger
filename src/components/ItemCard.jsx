@@ -2,6 +2,13 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore } from '../store.jsx';
 import { STATUS, STATUS_LABELS } from '../lib/mastery.js';
+import MrBadge from './MrBadge.jsx';
+
+// Touch devices synthesize a hover on first tap, which can swallow the tap that
+// should toggle a part. Only wire the hover tooltip on hover-capable pointers so
+// a tap on touch goes straight to togglePart.
+const CAN_HOVER = typeof window !== 'undefined'
+  && window.matchMedia?.('(hover: hover)').matches;
 
 const IMG = 'https://cdn.warframestat.us/img/';
 
@@ -60,7 +67,12 @@ export default function ItemCard({ item, farm }) {
           <div className="card-name">{item.name}</div>
           <div className="card-meta">
             <span>{item.type ?? item.category}</span>
-            {item.masteryReq > 0 && <span>MR {item.masteryReq}</span>}
+            {item.masteryReq > 0 && (
+              <span className="card-mr">
+                <MrBadge mr={item.masteryReq} size={16} />
+                MR {item.masteryReq}
+              </span>
+            )}
             <span>{item.totalXp.toLocaleString()} XP</span>
           </div>
           <div className="card-badges">
@@ -90,10 +102,11 @@ export default function ItemCard({ item, farm }) {
           {parts.map(p => (
             <button
               key={p.id}
+              type="button"
               className={`part-chip ${owned[p.id] ? 'part-owned' : ''}`}
               onClick={(e) => { e.stopPropagation(); togglePart(item.id, p.id); }}
-              onMouseEnter={(e) => showTip(e, p)}
-              onMouseLeave={() => setTip(null)}
+              onMouseEnter={CAN_HOVER ? (e) => showTip(e, p) : undefined}
+              onMouseLeave={CAN_HOVER ? () => setTip(null) : undefined}
               onFocus={(e) => showTip(e, p)}
               onBlur={() => setTip(null)}
             >

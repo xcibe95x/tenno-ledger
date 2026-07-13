@@ -1,6 +1,7 @@
 import { useStore } from '../store.jsx';
 import { masterySummary, mrLabel } from '../lib/mastery.js';
 import { signInWithGoogle, signOut } from '../lib/supabase.js';
+import MrBadge from './MrBadge.jsx';
 
 const SEGMENTS = 24;
 
@@ -17,18 +18,21 @@ export default function Header() {
       </div>
 
       <div className="hdr-mr">
-        <div className="mr-rank">
-          <span className="mr-num">{mrLabel(sum.mr)}</span>
-          <span className="mr-next">{sum.toNext.toLocaleString()} XP to {mrLabel(sum.mr + 1)}</span>
-        </div>
-        <div className="mr-bar" role="progressbar" aria-valuenow={Math.round(sum.nextPct * 100)} aria-valuemin={0} aria-valuemax={100} aria-label="Progress to next mastery rank">
-          {Array.from({ length: SEGMENTS }, (_, i) => (
-            <span key={i} className={`mr-seg ${i < filled ? 'on' : ''}`} />
-          ))}
-        </div>
-        <div className="mr-stats">
-          <span>{sum.masteredCount} / {sum.itemCount} mastered</span>
-          <span>{sum.xp.toLocaleString()} XP tracked</span>
+        <MrBadge mr={sum.mr} size={52} className="hdr-mr-badge" />
+        <div className="hdr-mr-body">
+          <div className="mr-rank">
+            <span className={`mr-num ${sum.mr > 30 ? 'mr-legendary' : ''}`}>{mrLabel(sum.mr)}</span>
+            <span className="mr-next">{sum.toNext.toLocaleString()} XP to {mrLabel(sum.mr + 1)}</span>
+          </div>
+          <div className="mr-bar" role="progressbar" aria-valuenow={Math.round(sum.nextPct * 100)} aria-valuemin={0} aria-valuemax={100} aria-label="Progress to next mastery rank">
+            {Array.from({ length: SEGMENTS }, (_, i) => (
+              <span key={i} className={`mr-seg ${i < filled ? 'on' : ''}`} />
+            ))}
+          </div>
+          <div className="mr-stats">
+            <span>{sum.masteredCount} / {sum.itemCount} mastered</span>
+            <span>{sum.xp.toLocaleString()} XP tracked</span>
+          </div>
         </div>
       </div>
 

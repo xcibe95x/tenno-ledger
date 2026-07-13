@@ -63,10 +63,22 @@ a:hover { text-decoration: underline; }
 }
 .hdr-sub { color: var(--muted); font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; }
 
-.hdr-mr { flex: 1; min-width: 260px; }
+.hdr-mr { flex: 1; min-width: 260px; display: flex; align-items: center; gap: 14px; }
+.hdr-mr-badge { flex: none; }
+.hdr-mr-body { flex: 1; min-width: 0; }
 .mr-rank { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
 .mr-num { font-family: var(--font-display); font-size: 22px; font-weight: 700; color: var(--energy); letter-spacing: 0.04em; }
+.mr-num.mr-legendary {
+  background: linear-gradient(120deg, var(--keep), var(--gold) 55%, #f4e3ad);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  text-shadow: 0 0 14px rgba(224, 179, 76, 0.35);
+}
 .mr-next { color: var(--muted); font-size: 12px; }
+
+/* official in-game mastery sigils (from the WARFRAME wiki) */
+.mr-badge { flex: none; object-fit: contain; vertical-align: middle; }
+
+.card-mr { display: inline-flex; align-items: center; gap: 4px; }
 
 .mr-bar { display: flex; gap: 3px; }
 .mr-seg {
@@ -212,8 +224,11 @@ a:hover { text-decoration: underline; }
   border: 1px solid var(--line);
   clip-path: polygon(4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%, 0 4px);
   cursor: pointer;
+  touch-action: manipulation;
 }
-.part-chip:hover { border-color: var(--gold-dim); color: var(--text); }
+@media (hover: hover) {
+  .part-chip:hover { border-color: var(--gold-dim); color: var(--text); }
+}
 .part-owned { color: var(--ok); border-color: rgba(125, 201, 143, 0.45); background: rgba(125, 201, 143, 0.08); }
 .chip-icon { width: 16px; height: 16px; flex: none; object-fit: contain; opacity: 0.9; }
 .chip-check { width: 16px; text-align: center; color: var(--ok); font-weight: 700; }
