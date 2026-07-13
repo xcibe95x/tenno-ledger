@@ -8,11 +8,37 @@ const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 const SCOPE = 'https://www.googleapis.com/auth/drive.file';
 const FILE_NAME = 'tenno-ledger-progress.json';
 const CONNECTED_KEY = 'wfh-drive-connected';
+const TOKEN_KEY = 'wfh-drive-token';
 
 export const driveEnabled = !!CLIENT_ID;
 
 let accessToken = null;
 let tokenExpiry = 0;
+
+// Google hands out an in-memory access token that dies on page unload, so every
+// reload otherwise had to re-acquire one (and often show the reconnect button).
+// Persisting the token lets a reload within its ~1h life reuse it with no Google
+// round-trip at all. It's a narrowly-scoped drive.file bearer token, the same
+// trust level as the progress we already keep in localStorage.
+try {
+  const saved = JSON.parse(localStorage.getItem(TOKEN_KEY) || 'null');
+  if (saved && saved.expiry > Date.now()) {
+    accessToken = saved.token;
+    tokenExpiry = saved.expiry;
+  }
+} catch { /* corrupt entry — ignore, we'll re-acquire */ }
+
+function setToken(token, expiry) {
+  accessToken = token;
+  tokenExpiry = expiry;
+  localStorage.setItem(TOKEN_KEY, JSON.stringify({ token, expiry }));
+}
+
+function clearToken() {
+  accessToken = null;
+  tokenExpiry = 0;
+  localStorage.removeItem(TOKEN_KEY);
+}
 
 export function driveConnected() {
   return !!accessToken && Date.now() < tokenExpiry;
@@ -41,8 +67,7 @@ export async function connectDrive() {
       scope: SCOPE,
       callback: (resp) => {
         if (resp.error) return reject(new Error(resp.error));
-        accessToken = resp.access_token;
-        tokenExpiry = Date.now() + (resp.expires_in - 60) * 1000;
+        setToken(resp.access_token, Date.now() + (resp.expires_in - 60) * 1000);
         localStorage.setItem(CONNECTED_KEY, '1');
         resolve();
       },
@@ -54,8 +79,7 @@ export async function connectDrive() {
 }
 
 export function disconnectDrive() {
-  accessToken = null;
-  tokenExpiry = 0;
+  clearToken();
   localStorage.removeItem(CONNECTED_KEY);
 }
 
@@ -64,7 +88,12 @@ async function api(path, opts = {}) {
     ...opts,
     headers: { ...opts.headers, Authorization: `Bearer ${accessToken}` },
   });
-  if (!res.ok) throw new Error(`Google Drive error ${res.status}`);
+  if (!res.ok) {
+    // A persisted token can be revoked or expired server-side before our clock
+    // says so; drop it so the next attempt re-acquires instead of looping on it.
+    if (res.status === 401) clearToken();
+    throw new Error(`Google Drive error ${res.status}`);
+  }
   return res;
 }
 

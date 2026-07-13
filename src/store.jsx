@@ -38,7 +38,12 @@ export function StoreProvider({ children }) {
   const [progress, setProgress] = useState(loadLocal);
   const [user, setUser] = useState(null);
   const [syncState, setSyncState] = useState(supabase ? 'idle' : 'off'); // off | idle | syncing | synced | error
-  const [driveState, setDriveState] = useState(driveEnabled ? (wasDriveConnected() ? 'reconnect' : 'idle') : 'off');
+  const [driveState, setDriveState] = useState(
+    !driveEnabled ? 'off'
+      : driveConnected() ? 'syncing' // valid token persisted — sync, don't flash "Reconnect"
+        : wasDriveConnected() ? 'reconnect'
+          : 'idle',
+  );
   const pushTimer = useRef(null);
   const drivePushTimer = useRef(null);
 
@@ -121,7 +126,9 @@ export function StoreProvider({ children }) {
     (async () => {
       setDriveState('syncing');
       try {
-        await connectDrive();
+        // A still-valid token persisted from the last visit means no popup and
+        // no silent-auth round-trip — sync straight away.
+        if (!driveConnected()) await connectDrive();
         const remote = await pullDrive();
         if (cancelled) return;
         const local = loadLocal();

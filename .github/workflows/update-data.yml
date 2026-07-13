@@ -1,0 +1,46 @@
+name: Refresh Warframe data
+
+# Keeps public/data/items.json current with the community WFCD dataset (which
+# updates within a day of each Warframe patch) so the deployed app stays fresh
+# without anyone running `npm run data` by hand. On a change, the commit triggers
+# Netlify's usual deploy-on-push.
+on:
+  schedule:
+    - cron: '0 6 * * *' # daily, 06:00 UTC — a no-change run makes no commit, so it never redeploys
+  workflow_dispatch: {}   # run on demand from the Actions tab when a patch lands
+
+# Don't let two scheduled runs race on the same branch.
+concurrency:
+  group: refresh-data
+  cancel-in-progress: true
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # push the regenerated data file
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # fetch-data.mjs relies only on Node built-ins, so no install step needed.
+      # items.json stamps a fresh generatedAt every run, so compare with that
+      # field removed — otherwise we'd commit (and redeploy) daily for nothing.
+      - name: Regenerate and commit only on a real data change
+        run: |
+          before=$(jq -Sc 'del(.generatedAt)' public/data/items.json | sha256sum)
+          npm run data
+          after=$(jq -Sc 'del(.generatedAt)' public/data/items.json | sha256sum)
+          if [ "$before" = "$after" ]; then
+            echo "No meaningful data changes — discarding timestamp-only churn."
+            git checkout -- public/data/items.json
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/data/items.json
+          git commit -m "chore: auto-refresh Warframe item data"
+          git push
