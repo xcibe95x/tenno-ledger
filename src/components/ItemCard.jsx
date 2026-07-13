@@ -14,18 +14,22 @@ const IMG = 'https://cdn.warframestat.us/img/';
 
 // The foundry recipe, deduped (recipes needing 2x list the part twice) and
 // split in two:
-//   parts     — components you farm from a drop table: checkable, with drop
-//               tooltips. This is the hunt checklist.
-//   materials — the blueprint plus every crafting resource/mineral. Shown for
-//               reference with their icons and quantities; not checkable,
-//               since you buy or bulk-grind them rather than hunt them.
-// Items built entirely from materials (market weapons, dojo/quest frames) have
-// no parts to farm, which the card's "where to get it" line already explains.
+//   parts     — components you acquire one at a time: anything with a drop
+//               table, plus the blueprint itself (a discrete step you buy or
+//               claim once, even when the dataset lists no drop location).
+//               Checkable, with drop tooltips — this is the acquisition checklist.
+//   materials — the crafting resources/minerals. Shown for reference with their
+//               icons and quantities; not checkable, since you bulk-grind them.
+// Items built entirely from materials (market weapons, dojo/quest frames) still
+// surface their blueprint chip so you can mark it obtained.
 function recipe(item) {
   const parts = new Map();
   const materials = new Map();
   for (const c of item.components ?? []) {
-    const farmable = c.type !== 'Resource' && (c.drops ?? []).some(d => d.location);
+    // The blueprint is always a checkable step; other components are only
+    // checkable when they actually drop somewhere (resources never do).
+    const isBlueprint = /blueprint/i.test(c.name ?? '');
+    const farmable = isBlueprint || (c.type !== 'Resource' && (c.drops ?? []).some(d => d.location));
     const bucket = farmable ? parts : materials;
     const prev = bucket.get(c.uniqueName);
     if (prev) prev.count += c.itemCount ?? 1;
@@ -147,7 +151,7 @@ export default function ItemCard({ item, farm }) {
               </div>
             ))
           ) : (
-            <div className="tipbox-line">Comes with the blueprint or vendor purchase — see the wiki</div>
+            <div className="tipbox-line">No drop table — buy it or claim it from a quest/boss (see wiki)</div>
           )}
         </div>,
         document.body,
