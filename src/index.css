@@ -134,8 +134,38 @@ a:hover { text-decoration: underline; }
   white-space: nowrap;
 }
 .wc-chip b { color: var(--text); font-weight: 600; }
-.wc-hot { color: var(--energy); border-color: rgba(92, 200, 220, 0.4); }
-.wc-hot b { color: var(--energy); }
+/* "hot" = this cycle is in its actionable window now — warm amber reads as
+   attention/active, unlike the cold blue that clashed with "warm"/night states */
+.wc-hot { color: var(--keep); border-color: rgba(224, 179, 76, 0.4); }
+.wc-hot b { color: var(--keep); }
+.wc-chip { cursor: pointer; }
+@media (hover: hover) { .wc-chip:hover { border-color: var(--gold-dim); } }
+.wc-chip.wc-active { border-color: var(--gold-dim); }
+
+/* One detail panel in a fixed spot under the strip — content swaps as you move
+   across chips, so nothing jumps. Absolute so it overlays rather than shifting
+   the page; the non-clipping wrap keeps it from being cut by the mobile scroll. */
+.worldclock-wrap { position: relative; }
+.wc-detail {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 60;
+  max-width: min(420px, 100%);
+  background: var(--panel-2); border: 1px solid var(--gold-dim);
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  padding: 10px 13px; font-size: 12.5px; color: var(--muted);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+.wc-detail-head {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 5px;
+  font-family: var(--font-display); font-weight: 600; color: var(--gold); letter-spacing: 0.03em;
+}
+.wc-detail-live {
+  font-family: var(--font-body); font-weight: 600; font-size: 10px;
+  text-transform: uppercase; letter-spacing: 0.08em; color: var(--keep);
+  border: 1px solid rgba(224, 179, 76, 0.4); padding: 1px 6px;
+}
+.wc-detail-do { line-height: 1.5; color: var(--text); }
+.wc-pro { margin-top: 6px; line-height: 1.5; color: var(--muted); }
+.wc-pro.on { color: var(--keep); }
 
 @media (max-width: 760px) {
   .worldclock { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
