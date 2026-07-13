@@ -235,8 +235,10 @@ a:hover { text-decoration: underline; }
 
 /* build materials (blueprint + resources) — reference only, not a checklist */
 .card-materials { margin-top: -4px; opacity: 0.85; }
-.part-mat { cursor: default; }
-.part-mat:hover { border-color: var(--line); color: var(--muted); }
+.part-mat { cursor: help; }
+@media (hover: hover) {
+  .part-mat:hover { border-color: var(--gold-dim); color: var(--text); }
+}
 
 /* part drop overlay */
 .tipbox {
@@ -260,11 +262,17 @@ a:hover { text-decoration: underline; }
 /* ---------- farm planner tiers ---------- */
 .tier { margin-bottom: 30px; }
 .tier-title {
+  display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
   font-family: var(--font-display); font-size: 16px; font-weight: 700;
   letter-spacing: 0.12em; text-transform: uppercase;
   margin-bottom: 12px; padding-left: 12px;
   border-left: 3px solid var(--gold);
 }
+.tier-caret { font-size: 12px; transition: transform 0.15s; opacity: 0.8; }
+.tier-title.is-collapsed { margin-bottom: 0; opacity: 0.7; }
+.tier-title.is-collapsed .tier-caret { transform: rotate(-90deg); }
+.tier-title:hover .tier-caret { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .tier-caret { transition: none; } }
 .tier-farming .tier-title { border-left-color: var(--keep); color: var(--keep); }
 .tier-leveling .tier-title { border-left-color: var(--energy); color: var(--energy); }
 .tier-easy .tier-title, .tier-trivial .tier-title { border-left-color: var(--ok); }

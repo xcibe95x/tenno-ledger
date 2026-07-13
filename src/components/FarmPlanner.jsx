@@ -4,10 +4,43 @@ import { STATUS, masterySummary } from '../lib/mastery.js';
 import { farmInfo, TIER_ORDER, TIER_LABELS } from '../lib/farming.js';
 import ItemCard from './ItemCard.jsx';
 
+const COLLAPSE_KEY = 'wfh-collapsed-sections';
+
+// Section headers toggle their body; which ones are collapsed persists so the
+// layout you set stays put across visits.
+function loadCollapsed() {
+  try { return new Set(JSON.parse(localStorage.getItem(COLLAPSE_KEY) || '[]')); }
+  catch { return new Set(); }
+}
+
+function Section({ id, title, count, className, collapsed, onToggle, children }) {
+  return (
+    <div className={`tier ${className}`}>
+      <button
+        className={`tier-title ${collapsed ? 'is-collapsed' : ''}`}
+        onClick={() => onToggle(id)}
+        aria-expanded={!collapsed}
+      >
+        <span className="tier-caret" aria-hidden="true">▾</span>
+        {title} <span className="tier-count">{count}</span>
+      </button>
+      {!collapsed && <div className="grid">{children}</div>}
+    </div>
+  );
+}
+
 export default function FarmPlanner() {
   const { items, progress } = useStore();
   const [cat, setCat] = useState('all');
   const [q, setQ] = useState('');
+  const [collapsed, setCollapsed] = useState(loadCollapsed);
+
+  const toggle = (id) => setCollapsed(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    localStorage.setItem(COLLAPSE_KEY, JSON.stringify([...next]));
+    return next;
+  });
 
   const cats = useMemo(
     () => [...new Set((items ?? []).map(i => i.category))].sort(),
@@ -70,33 +103,24 @@ export default function FarmPlanner() {
       </div>
 
       {farming.length > 0 && (
-        <div className="tier tier-farming">
-          <h2 className="tier-title">Now farming <span className="tier-count">{farming.length}</span></h2>
-          <div className="grid">
-            {farming.map(({ item, farm }) => <ItemCard key={item.id} item={item} farm={farm} />)}
-          </div>
-        </div>
+        <Section id="farming" title="Now farming" count={farming.length} className="tier-farming" collapsed={collapsed.has('farming')} onToggle={toggle}>
+          {farming.map(({ item, farm }) => <ItemCard key={item.id} item={item} farm={farm} />)}
+        </Section>
       )}
 
       {leveling.length > 0 && (
-        <div className="tier tier-leveling">
-          <h2 className="tier-title">Now leveling <span className="tier-count">{leveling.length}</span></h2>
-          <div className="grid">
-            {leveling.map(({ item }) => <ItemCard key={item.id} item={item} />)}
-          </div>
-        </div>
+        <Section id="leveling" title="Now leveling" count={leveling.length} className="tier-leveling" collapsed={collapsed.has('leveling')} onToggle={toggle}>
+          {leveling.map(({ item }) => <ItemCard key={item.id} item={item} />)}
+        </Section>
       )}
 
       {TIER_ORDER.map(t => {
         const group = tiers.get(t) ?? [];
         if (!group.length) return null;
         return (
-          <div key={t} className={`tier tier-${t}`}>
-            <h2 className="tier-title">{TIER_LABELS[t]} <span className="tier-count">{group.length}</span></h2>
-            <div className="grid">
-              {group.map(({ item, farm }) => <ItemCard key={item.id} item={item} farm={farm} />)}
-            </div>
-          </div>
+          <Section key={t} id={t} title={TIER_LABELS[t]} count={group.length} className={`tier-${t}`} collapsed={collapsed.has(t)} onToggle={toggle}>
+            {group.map(({ item, farm }) => <ItemCard key={item.id} item={item} farm={farm} />)}
+          </Section>
         );
       })}
       {totalLeft === 0 && farming.length === 0 && leveling.length === 0 && (

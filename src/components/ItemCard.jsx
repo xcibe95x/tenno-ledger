@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore } from '../store.jsx';
 import { STATUS, STATUS_LABELS } from '../lib/mastery.js';
+import { resourceFarm } from '../lib/resources.js';
 import MrBadge from './MrBadge.jsx';
 
 // Touch devices synthesize a hover on first tap, which can swallow the tap that
@@ -124,12 +125,21 @@ export default function ItemCard({ item, farm }) {
       )}
       {materials.length > 0 && (
         <div className="card-parts card-materials">
-          {materials.map(m => (
-            <span key={m.id} className="part-chip part-mat" title={`${m.count > 1 ? `${m.count.toLocaleString()}× ` : ''}${m.name}`}>
-              {m.imageName && <img className="chip-icon" loading="lazy" src={IMG + m.imageName} alt="" />}
-              {m.count > 1 ? `${m.count.toLocaleString()}× ` : ''}{m.name}
-            </span>
-          ))}
+          {materials.map(m => {
+            const farm = resourceFarm(m.name);
+            return (
+              <span
+                key={m.id}
+                className="part-chip part-mat"
+                title={`${m.count > 1 ? `${m.count.toLocaleString()}× ` : ''}${m.name}${farm ? ` — ${farm}` : ''}`}
+                onMouseEnter={CAN_HOVER ? (e) => showTip(e, { ...m, mat: true, farm }) : undefined}
+                onMouseLeave={CAN_HOVER ? () => setTip(null) : undefined}
+              >
+                {m.imageName && <img className="chip-icon" loading="lazy" src={IMG + m.imageName} alt="" />}
+                {m.count > 1 ? `${m.count.toLocaleString()}× ` : ''}{m.name}
+              </span>
+            );
+          })}
         </div>
       )}
       {tip && createPortal(
@@ -141,8 +151,10 @@ export default function ItemCard({ item, farm }) {
           }}
         >
           <div className="tipbox-title">
-            {tip.part.count > 1 ? `${tip.part.count}× ` : ''}{tip.part.name}
-            <span className="tipbox-state">{owned[tip.part.id] ? ' — acquired ✓' : ' — click to mark acquired'}</span>
+            {tip.part.count > 1 ? `${(tip.part.mat ? tip.part.count.toLocaleString() : tip.part.count)}× ` : ''}{tip.part.name}
+            {tip.part.mat
+              ? <span className="tipbox-state"> — build material</span>
+              : <span className="tipbox-state">{owned[tip.part.id] ? ' — acquired ✓' : ' — click to mark acquired'}</span>}
           </div>
           {tip.part.drops.length > 0 ? (
             tip.part.drops.map((d, i) => (
@@ -150,6 +162,10 @@ export default function ItemCard({ item, farm }) {
                 {d.location}{d.chance != null && <b> {chancePct(d.chance)}</b>}
               </div>
             ))
+          ) : tip.part.farm ? (
+            <div className="tipbox-line">{tip.part.farm}</div>
+          ) : tip.part.mat ? (
+            <div className="tipbox-line">Grind it from missions, or trade/buy — see the wiki</div>
           ) : (
             <div className="tipbox-line">No drop table — buy it or claim it from a quest/boss (see wiki)</div>
           )}
