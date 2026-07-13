@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore } from '../store.jsx';
 import { STATUS, STATUS_LABELS } from '../lib/mastery.js';
-import { resourceFarm } from '../lib/resources.js';
+import { isCraftedPart } from '../lib/farming.js';
+import { resourceFarm, itemSource } from '../lib/resources.js';
 import MrBadge from './MrBadge.jsx';
 
 // Touch devices synthesize a hover on first tap, which can swallow the tap that
@@ -27,10 +28,18 @@ function recipe(item) {
   const parts = new Map();
   const materials = new Map();
   for (const c of item.components ?? []) {
-    // The blueprint is always a checkable step; other components are only
-    // checkable when they actually drop somewhere (resources never do).
+    // Checkable "parts" are the things you acquire one at a time, even when the
+    // dataset lists no drop location (e.g. Grendel's frame parts, necramech
+    // parts). We treat a component as a part when it is any of:
+    //   • the blueprint;
+    //   • a crafted component under /Recipes/ (frame Chassis/Systems, weapon Barrel…);
+    //   • a necramech part under /Mechs/ (WFCD files these under Resources);
+    //   • a bespoke part named after the item itself ("Voidrig Capsule"), which
+    //     no shared bulk resource ever is;
+    //   • anything with its own drop table.
+    // Everything else is a shared bulk resource, shown as a reference material.
     const isBlueprint = /blueprint/i.test(c.name ?? '');
-    const farmable = isBlueprint || (c.type !== 'Resource' && (c.drops ?? []).some(d => d.location));
+    const farmable = isBlueprint || isCraftedPart(item, c) || (c.type !== 'Resource' && (c.drops ?? []).some(d => d.location));
     const bucket = farmable ? parts : materials;
     const prev = bucket.get(c.uniqueName);
     if (prev) prev.count += c.itemCount ?? 1;
@@ -165,9 +174,11 @@ export default function ItemCard({ item, farm }) {
           ) : tip.part.farm ? (
             <div className="tipbox-line">{tip.part.farm}</div>
           ) : tip.part.mat ? (
-            <div className="tipbox-line">Grind it from missions, or trade/buy — see the wiki</div>
+            <div className="tipbox-line">Farm spot not mapped yet — check the wiki for the best node</div>
+          ) : itemSource(item.name) ? (
+            <div className="tipbox-line">From {itemSource(item.name)}</div>
           ) : (
-            <div className="tipbox-line">No drop table — buy it or claim it from a quest/boss (see wiki)</div>
+            <div className="tipbox-line">No drop table — see the wiki for the exact source</div>
           )}
         </div>,
         document.body,

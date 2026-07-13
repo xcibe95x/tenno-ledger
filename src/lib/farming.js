@@ -14,6 +14,8 @@
 // (2) ingredient weapons (Akbronco needs 2× Bronco) appear as components with
 // junk drops — they are priced separately via weaponIngredients, not farmed.
 
+import { itemSource } from './resources.js';
+
 const TIERS = [
   { max: 15, key: 'trivial', label: 'Quick pickups' },
   { max: 35, key: 'easy', label: 'Easy farms' },
@@ -85,6 +87,18 @@ export function isBaroExclusive(item) {
   return /^(Prisma|Mara)\s/.test(item.name);
 }
 
+// A component you acquire individually — a real part, not a shared bulk
+// resource — even when the dataset carries no drop location for it. Covers
+// crafted parts under /Recipes/ (frame Chassis/Systems, weapon Barrel), necramech
+// parts (WFCD files those under /Mechs/ Resources), and bespoke parts named after
+// the item ("Voidrig Capsule"), which no shared resource ever is. Excludes the
+// blueprint, which callers treat on its own.
+export function isCraftedPart(item, c) {
+  const name = c.name ?? '';
+  if (/blueprint/i.test(name)) return false;
+  return /\/Recipes\/|\/Mechs\//.test(c.uniqueName ?? '') || name.startsWith(`${item.name} `);
+}
+
 export function farmInfo(item, userMr = null) {
   if (item.unobtainable) {
     return { score: Infinity, tier: 'unobtainable', tierLabel: 'Unobtainable', reason: 'Founders exclusive — no longer acquirable', where: null };
@@ -97,6 +111,15 @@ export function farmInfo(item, userMr = null) {
   let reason;
   let where = null;
   const sources = collectSources(item);
+
+  // Crafted parts with no drop chance in the dataset (e.g. Grendel's node-locked
+  // Chassis/Neuroptics/Systems, necramech parts, special quest parts). The
+  // branches below see no chances and would price the part-farm at zero, so a
+  // real grind can be mis-tiered as a "quick pickup" — charge for each instead.
+  const mysteryParts = (item.components ?? []).filter(c =>
+    isCraftedPart(item, c)
+    && !(item.weaponIngredients ?? []).some(w => w.name === c.name)
+    && !(c.drops ?? []).some(d => d.location));
 
   // Part-farm cost: expected runs to see every farmed part drop once. One 2%
   // part outweighs three 40% parts. Zero when the parts are bought or built.
@@ -139,6 +162,11 @@ export function farmInfo(item, userMr = null) {
     reason = grindy
       ? `Farmed drops — ${runsTxt}`
       : 'Guaranteed drops — one run per part';
+  } else if (mysteryParts.length) {
+    // Parts exist but the dataset has no drop data for any of them — the
+    // mysteryParts block below prices the grind and names the source; don't also
+    // add the flat "unknown acquisition" charge or it double-counts (necramechs).
+    reason = 'Built from farmed parts';
   } else {
     score += 40;
     reason = 'Quest, vendor or bundle reward — see the wiki page';
@@ -148,6 +176,19 @@ export function farmInfo(item, userMr = null) {
     const parts = item.weaponIngredients.map(w => `${w.count}× ${w.name}`).join(', ');
     reason += ` · also needs ${parts} built`;
     score += 6 * item.weaponIngredients.length;
+  }
+
+  // Dojo-researched gear (Volt, Banshee, ClanTech weapons) also has no part
+  // drops, but you replicate it in the lab — that's not an unquantified grind,
+  // so the dojo branch already priced it. Only charge the mystery grind for the
+  // rest (necramechs, node-locked/quest parts).
+  if (mysteryParts.length && !isDojoResearch(item)) {
+    score += 20 + 12 * mysteryParts.length;
+    const src = itemSource(item.name);
+    reason += src
+      ? ` · parts from ${src}`
+      : ` · ${mysteryParts.length} part${mysteryParts.length > 1 ? 's have' : ' has'} no listed drop — special farm, expect a grind (see wiki)`;
+    if (!where && src) where = `Parts: ${src}`;
   }
   if (mrLocked) {
     reason = `Locked until MR ${item.masteryReq} · ${reason}`;
