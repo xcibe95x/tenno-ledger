@@ -134,13 +134,36 @@ a:hover { text-decoration: underline; }
   white-space: nowrap;
 }
 .wc-chip b { color: var(--text); font-weight: 600; }
-/* "hot" = this cycle is in its actionable window now — warm amber reads as
-   attention/active, unlike the cold blue that clashed with "warm"/night states */
-.wc-hot { color: var(--keep); border-color: rgba(224, 179, 76, 0.4); }
-.wc-hot b { color: var(--keep); }
-.wc-chip { cursor: pointer; }
-@media (hover: hover) { .wc-chip:hover { border-color: var(--gold-dim); } }
-.wc-chip.wc-active { border-color: var(--gold-dim); }
+/* Each cycle state carries its own colour (--wc-c): day/night, warm/cold,
+   Fass/Vome, etc. "hot" (the actionable window) keeps that colour but adds a
+   glow so it still reads as active-now. */
+.wc-chip { cursor: pointer; color: var(--wc-c, var(--muted)); }
+.wc-chip b { color: var(--wc-c, var(--text)); }
+@media (hover: hover) { .wc-chip:hover { border-color: var(--wc-c, var(--gold-dim)); } }
+.wc-chip.wc-active { border-color: var(--wc-c, var(--gold-dim)); }
+.wc-hot {
+  border-color: color-mix(in srgb, var(--wc-c) 50%, transparent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--wc-c) 28%, transparent);
+}
+
+/* Colours tuned to the in-game cycle indicators. */
+.wc-t-day     { --wc-c: #f2c847; } /* Cetus daytime sun */
+.wc-t-night   { --wc-c: #5a78d6; } /* Cetus night sky (Eidolon blue) */
+.wc-t-warm    { --wc-c: #ef6d3a; } /* Orb Vallis warm gauge (orange-red) */
+.wc-t-cold    { --wc-c: #63cfe8; } /* Orb Vallis cold gauge (icy cyan) */
+.wc-t-fass    { --wc-c: #ef9a2e; } /* Fass — amber/orange worm */
+.wc-t-vome    { --wc-c: #3aa6ef; } /* Vome — blue worm */
+.wc-t-faction { --wc-c: #9b7fd0; } /* Zariman void purple (unknown faction) */
+.wc-t-corpus  { --wc-c: #2fb6d1; } /* Corpus teal */
+.wc-t-grineer { --wc-c: #c1793f; } /* Grineer rust */
+.wc-t-baro    { --wc-c: #c9a86a; } /* Orokin gold */
+/* Duviri spiral moods */
+.wc-t-duviri  { --wc-c: #d98fb8; } /* fallback rose */
+.wc-t-joy     { --wc-c: #f2c847; } /* Joy — yellow */
+.wc-t-anger   { --wc-c: #e04d40; } /* Anger — red */
+.wc-t-envy    { --wc-c: #5fbf6e; } /* Envy — green */
+.wc-t-sorrow  { --wc-c: #4f97e0; } /* Sorrow — blue */
+.wc-t-fear    { --wc-c: #a06fce; } /* Fear — violet */
 
 /* One detail panel in a fixed spot under the strip — content swaps as you move
    across chips, so nothing jumps. Absolute so it overlays rather than shifting

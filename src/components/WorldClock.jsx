@@ -24,7 +24,7 @@ function buildChips(ws) {
   const cetus = ws.cetusCycle;
   if (cetus?.expiry) {
     chips.push({
-      key: 'cetus', hot: !cetus.isDay,
+      key: 'cetus', hot: !cetus.isDay, tone: cetus.isDay ? 'day' : 'night',
       label: `Cetus ${cetus.isDay ? '☀ day' : '☾ night'}`,
       left: timeLeft(cetus.expiry),
       do: cetus.isDay
@@ -36,7 +36,7 @@ function buildChips(ws) {
   const vallis = ws.vallisCycle;
   if (vallis?.expiry) {
     chips.push({
-      key: 'vallis', hot: vallis.isWarm,
+      key: 'vallis', hot: vallis.isWarm, tone: vallis.isWarm ? 'warm' : 'cold',
       label: `Vallis ${vallis.isWarm ? '♨ warm' : '❄ cold'}`,
       left: timeLeft(vallis.expiry),
       do: vallis.isWarm
@@ -50,7 +50,7 @@ function buildChips(ws) {
     const active = cambion.active ?? cambion.state;
     const fass = active === 'fass';
     chips.push({
-      key: 'cambion', hot: fass,
+      key: 'cambion', hot: fass, tone: fass ? 'fass' : 'vome',
       label: `Deimos ${fass ? 'Fass' : 'Vome'}`,
       left: timeLeft(cambion.expiry),
       do: fass
@@ -61,8 +61,10 @@ function buildChips(ws) {
   }
   const zariman = ws.zarimanCycle;
   if (zariman?.state && zariman?.expiry) {
+    const zs = (zariman.state || '').toLowerCase();
     chips.push({
       key: 'zariman', hot: false,
+      tone: zs === 'corpus' ? 'corpus' : zs === 'grineer' ? 'grineer' : 'faction',
       label: `Zariman: ${zariman.state}`,
       left: timeLeft(zariman.expiry),
       do: `${zariman.state} controls the Zariman now — sets which Angels of the Zariman bounties and enemy spawns are up (Voidplume farming).`,
@@ -70,8 +72,11 @@ function buildChips(ws) {
   }
   const duviri = ws.duviriCycle;
   if (duviri?.state) {
+    // Duviri spiral moods each have a canonical colour in-game.
+    const mood = (duviri.state || '').toLowerCase();
+    const moods = new Set(['joy', 'anger', 'envy', 'sorrow', 'fear']);
     chips.push({
-      key: 'duviri', hot: false,
+      key: 'duviri', hot: false, tone: moods.has(mood) ? mood : 'duviri',
       label: `Duviri: ${duviri.state}`,
       left: duviri.expiry ? timeLeft(duviri.expiry) : null,
       do: `The Duviri spiral mood is ${duviri.state} — it shifts The Circuit's enemies and which incarnon/Kullervo rewards are emphasised.`,
@@ -85,13 +90,13 @@ function buildChips(ws) {
     const leaves = Date.parse(baro.expiry);
     if (now < arrives) {
       chips.push({
-        key: 'baro', hot: false,
+        key: 'baro', hot: false, tone: 'baro',
         label: 'Baro in', left: timeLeft(baro.activation),
         do: "Baro Ki'Teer inbound. His stock rotates — often mastery gear like Prisma weapons and Mara Detron. Stockpile Ducats now.",
       });
     } else if (now < leaves) {
       chips.push({
-        key: 'baro', hot: true,
+        key: 'baro', hot: true, tone: 'baro',
         label: `Baro at ${baro.location ?? 'a relay'}`, left: timeLeft(baro.expiry),
         do: "Baro Ki'Teer is at the relay — spend Ducats + credits.",
         pro: 'Grab any mastery-worthy weapons you still need before he leaves.',
@@ -138,7 +143,7 @@ export default function WorldClock() {
           <button
             key={c.key}
             type="button"
-            className={`wc-chip ${c.hot ? 'wc-hot' : ''} ${active?.key === c.key ? 'wc-active' : ''}`}
+            className={`wc-chip wc-t-${c.tone} ${c.hot ? 'wc-hot' : ''} ${active?.key === c.key ? 'wc-active' : ''}`}
             aria-label={`${c.label}. ${c.do}`}
             onClick={() => toggle(c)}
             onMouseEnter={CAN_HOVER ? () => setActive(c) : undefined}
