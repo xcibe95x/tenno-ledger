@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useStore } from '../store.jsx';
 import { STATUS, masterySummary } from '../lib/mastery.js';
 import { farmInfo, TIER_ORDER, TIER_LABELS } from '../lib/farming.js';
+import { metaInfo } from '../lib/meta.js';
 import ItemCard from './ItemCard.jsx';
 
 const COLLAPSE_KEY = 'wfh-collapsed-sections';
@@ -47,7 +48,7 @@ export default function FarmPlanner() {
     [items],
   );
 
-  const { farming, leveling, tiers, totalLeft, mr } = useMemo(() => {
+  const { farming, leveling, metaPicks, tiers, totalLeft, mr } = useMemo(() => {
     const { mr } = masterySummary(items ?? [], progress.status, progress.extraXp, progress.itemXp);
     const needle = q.trim().toLowerCase();
     const inCat = (items ?? []).filter(i =>
@@ -79,10 +80,15 @@ export default function FarmPlanner() {
       .filter(i => (progress.status[i.id] ?? STATUS.MISSING) === STATUS.MISSING)
       .map(i => ({ item: i, farm: farmInfo(i, mr) }))
       .sort(byPayoff);
+    // Meta/OP weapons you don't own yet jump the queue: their own priority
+    // section on top, pulled out of the difficulty tiers below.
+    const metaPicks = scored.filter(s => metaInfo(s.item));
     const tiers = new Map(TIER_ORDER.map(t => [t, []]));
-    for (const s of scored) tiers.get(s.farm.tier)?.push(s);
+    for (const s of scored) {
+      if (!metaInfo(s.item)) tiers.get(s.farm.tier)?.push(s);
+    }
 
-    return { farming, leveling, tiers, totalLeft: scored.length, mr };
+    return { farming, leveling, metaPicks, tiers, totalLeft: scored.length, mr };
   }, [items, progress.status, progress.extraXp, progress.itemXp, cat, q]);
 
   return (
@@ -111,6 +117,12 @@ export default function FarmPlanner() {
       {leveling.length > 0 && (
         <Section id="leveling" title="Now leveling" count={leveling.length} className="tier-leveling" collapsed={collapsed.has('leveling')} onToggle={toggle}>
           {leveling.map(({ item }) => <ItemCard key={item.id} item={item} />)}
+        </Section>
+      )}
+
+      {metaPicks.length > 0 && (
+        <Section id="meta" title="★ Meta picks — farm these first" count={metaPicks.length} className="tier-meta" collapsed={collapsed.has('meta')} onToggle={toggle}>
+          {metaPicks.map(({ item, farm }) => <ItemCard key={item.id} item={item} farm={farm} />)}
         </Section>
       )}
 

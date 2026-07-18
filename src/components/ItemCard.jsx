@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useStore } from '../store.jsx';
 import { STATUS, STATUS_LABELS } from '../lib/mastery.js';
 import { isCraftedPart } from '../lib/farming.js';
+import { metaInfo } from '../lib/meta.js';
 import { resourceFarm, itemSource } from '../lib/resources.js';
 import MrBadge from './MrBadge.jsx';
 
@@ -91,6 +92,7 @@ export default function ItemCard({ item, farm }) {
           </div>
           <div className="card-badges">
             <span className={`badge badge-st${st}`}>{STATUS_LABELS[st]}</span>
+            {metaInfo(item) && <span className="badge badge-meta" title={metaInfo(item)}>★ Meta</span>}
             {item.isPrime && <span className="badge badge-prime">Prime</span>}
             {item.vaulted && <span className="badge badge-vault">Vaulted</span>}
             {item.unobtainable && <span className="badge badge-vault">Founders</span>}

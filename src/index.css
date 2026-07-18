@@ -256,6 +256,7 @@ a:hover { text-decoration: underline; }
 .badge-prime { color: var(--gold); border-color: var(--gold-dim); }
 .badge-vault { color: var(--danger); border-color: rgba(216, 112, 92, 0.4); }
 .badge-keep { color: var(--keep); border-color: rgba(224, 179, 76, 0.5); background: rgba(224, 179, 76, 0.08); }
+.badge-meta { color: var(--gold); border-color: var(--gold-dim); background: rgba(224, 179, 76, 0.1); }
 
 .card-farm {
   border-top: 1px dashed var(--line);
@@ -327,6 +328,7 @@ a:hover { text-decoration: underline; }
 .tier-title:hover .tier-caret { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { .tier-caret { transition: none; } }
 .tier-farming .tier-title { border-left-color: var(--keep); color: var(--keep); }
+.tier-meta .tier-title { border-left-color: var(--gold); color: var(--gold); }
 .tier-leveling .tier-title { border-left-color: var(--energy); color: var(--energy); }
 .tier-easy .tier-title, .tier-trivial .tier-title { border-left-color: var(--ok); }
 .tier-moderate .tier-title { border-left-color: var(--energy); }
