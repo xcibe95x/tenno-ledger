@@ -162,8 +162,8 @@ export default function Mods() {
           className="inp inp-search" type="search" placeholder="Search mods…"
           value={q} onChange={e => setQ(e.target.value)} aria-label="Search mods"
         />
-        <select className="inp" value={slot} onChange={e => setSlot(e.target.value)} aria-label="Slot">
-          <option value="all">All slots</option>
+        <select className="inp" value={slot} onChange={e => setSlot(e.target.value)} aria-label="Type">
+          <option value="all">All types</option>
           {SLOT_ORDER.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
         <label className="mod-toggle">
