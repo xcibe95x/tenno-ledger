@@ -4,6 +4,7 @@ import Header from './components/Header.jsx';
 import WorldClock from './components/WorldClock.jsx';
 import Collection from './components/Collection.jsx';
 import FarmPlanner from './components/FarmPlanner.jsx';
+import Mods from './components/Mods.jsx';
 import KeepList from './components/KeepList.jsx';
 import Settings from './components/Settings.jsx';
 
@@ -11,6 +12,7 @@ const TABS = [
   { key: 'collection', label: 'Collection', el: <Collection /> },
   { key: 'farm', label: 'Farm planner', el: <FarmPlanner /> },
   { key: 'keep', label: 'Keep list', el: <KeepList /> },
+  { key: 'mods', label: 'Mods', el: <Mods /> },
   { key: 'settings', label: 'Settings', el: <Settings /> },
 ];
 

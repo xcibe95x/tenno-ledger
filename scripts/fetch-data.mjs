@@ -192,3 +192,61 @@ const out = { generatedAt: new Date().toISOString(), items, nodes };
 const json = JSON.stringify(out);
 writeFileSync(path.join(outDir, 'items.json'), json);
 console.log(`Wrote public/data/items.json (${(json.length / 1024 / 1024).toFixed(2)} MB)`);
+
+// ---------------------------------------------------------------------------
+// Mods — the whole equippable roster (for the Mods page). Same WFCD source.
+// Mastery items are gear; mods are their own dataset with weapon-slot
+// compatibility, rarity, polarity and drop tables.
+// ---------------------------------------------------------------------------
+console.log('Fetching mod data from WFCD/warframe-items ...');
+const rawMods = await fetchJson('Mods.json');
+console.log(`Fetched ${rawMods.length} raw mods`);
+
+// Only real, equippable gear mods. Skips Focus ways, Rivens, Parazon/Plexus/
+// K-Drive/Railjack niche mods, Peculiar/Transmutation junk, and the invisible
+// set-bonus pseudo-entries.
+const MOD_SLOT = {
+  'Warframe Mod': 'Warframe',
+  'Aura': 'Aura',
+  'Primary Mod': 'Primary',
+  'Shotgun Mod': 'Shotgun',
+  'Secondary Mod': 'Secondary',
+  'Melee Mod': 'Melee',
+  'Stance Mod': 'Melee',
+  'Companion Mod': 'Companion',
+  'Arch-Gun Mod': 'Archwing',
+  'Arch-Melee Mod': 'Archwing',
+  'Archwing Mod': 'Archwing',
+  'Necramech Mod': 'Necramech',
+};
+
+const seenMods = new Set();
+const mods = [];
+for (const m of rawMods) {
+  // Aura mods carry type "Warframe Mod" but compatName "AURA"; split them out
+  // so the slot filter can separate frame mods from auras.
+  const slot = m.compatName === 'AURA' ? 'Aura' : MOD_SLOT[m.type];
+  if (!slot) continue;
+  if (!m.name || seenMods.has(m.name)) continue;
+  seenMods.add(m.name);
+  mods.push({
+    name: m.name,
+    slot,
+    // The specific compatibility (e.g. "Sniper", "Volt", "Claws") — a useful
+    // sub-label under the broad slot bucket. Blank for universal mods.
+    compat: m.compatName && m.compatName !== m.type && m.compatName !== 'AURA' ? m.compatName : null,
+    rarity: m.rarity ?? null,
+    polarity: m.polarity ?? null,
+    image: m.imageName ?? null,
+    isPrime: !!m.isPrime,
+    tradable: !!m.tradable,
+    drops: bestDrops(m.drops, 2),
+  });
+}
+mods.sort((a, b) => a.slot.localeCompare(b.slot) || a.name.localeCompare(b.name));
+console.log(`Kept ${mods.length} equippable mods`);
+
+const modsOut = { generatedAt: new Date().toISOString(), mods };
+const modsJson = JSON.stringify(modsOut);
+writeFileSync(path.join(outDir, 'mods.json'), modsJson);
+console.log(`Wrote public/data/mods.json (${(modsJson.length / 1024 / 1024).toFixed(2)} MB)`);

@@ -336,6 +336,64 @@ a:hover { text-decoration: underline; }
 .tier-brutal .tier-title { border-left-color: var(--danger); }
 .tier-count { color: var(--muted); font-size: 13px; margin-left: 8px; }
 
+/* ---------- mods page ---------- */
+.tier-mod-core .tier-title { border-left-color: var(--ok); color: var(--ok); }
+.tier-mod-damage .tier-title { border-left-color: var(--danger); color: var(--danger); }
+.tier-mod-ability .tier-title { border-left-color: #a78bd8; color: #a78bd8; }
+.tier-mod-survival .tier-title { border-left-color: var(--energy); color: var(--energy); }
+.tier-mod-primed .tier-title { border-left-color: var(--gold); color: var(--gold); }
+.tier-mod-slot .tier-title { border-left-color: var(--gold-dim); color: var(--text); }
+
+.mod-tier-hint { color: var(--muted); font-size: 12.5px; max-width: 80ch; margin: -4px 0 14px; }
+
+.mod-toggle { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12.5px; cursor: pointer; white-space: nowrap; }
+.mod-toggle input { accent-color: var(--gold); cursor: pointer; }
+
+.mod-slot {
+  font-family: var(--font-display); font-size: 10.5px; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--gold);
+}
+.mod-rarity {
+  font-family: var(--font-display); font-size: 10px; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase;
+}
+.mod-rarity.r-legendary { color: #e6c35c; }
+.mod-rarity.r-rare { color: #d9c26a; }
+.mod-rarity.r-uncommon { color: #9fb7c9; }
+.mod-rarity.r-common { color: var(--muted); }
+.mod-effect { color: var(--text); font-size: 13px; margin: 4px 0 8px; }
+
+/* mod-icon border reads like the in-game mod backing */
+.mod-icon { border: 2px solid var(--tier, var(--line)); background: color-mix(in srgb, var(--tier, var(--panel-2)) 14%, var(--panel-2)); }
+.mod-icon img { max-width: 48px; max-height: 48px; }
+.mod-t-common { --tier: #b87333; }      /* bronze   */
+.mod-t-uncommon { --tier: #9aa6b5; }    /* silver-grey */
+.mod-t-rare { --tier: #d6b24e; }        /* gold     */
+.mod-t-legendary { --tier: #35c2a0; }   /* Umbra — Sentient teal-green */
+.mod-t-prime { --tier: #e8eef7; }       /* platinum (bright cool white) */
+/* Prime gets a cool platinum glow so it never reads as gold Legendary */
+.mod-t-prime.card-img { box-shadow: inset 0 0 12px rgba(200, 220, 255, 0.4); }
+.mod-t-archon { --tier: #e0554a; }      /* crimson  */
+.mod-t-galvanized { --tier: #4d6b78; }  /* dark gunmetal steel-blue… */
+/* …with a steel-blue interior glow — mirrors the Galvanized mod backing,
+   kept dark + cool so it never reads as bronze Common or silver Uncommon */
+.mod-t-galvanized.card-img { box-shadow: inset 0 0 12px rgba(60, 104, 128, 0.55); }
+.mod-t-amalgam { --tier: #efdca4; }     /* champagne / pale gold */
+
+.mod-legend { display: flex; flex-wrap: wrap; gap: 6px 8px; margin: -6px 0 18px; }
+.mod-legend-item {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--muted); font-size: 11.5px;
+  padding: 4px 9px; border: 1px solid var(--line);
+  clip-path: polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px);
+  transition: border-color 0.12s, color 0.12s;
+}
+.mod-legend-item:hover { color: var(--text); border-color: var(--gold-dim); }
+.mod-legend-item.is-active { color: var(--text); border-color: var(--tier); background: color-mix(in srgb, var(--tier) 12%, transparent); }
+.mod-legend-swatch { width: 12px; height: 12px; flex: none; border: 2px solid var(--tier, var(--line)); background: color-mix(in srgb, var(--tier) 22%, transparent); }
+.mod-legend-clear { color: var(--muted); font-size: 11.5px; padding: 4px 6px; }
+.mod-legend-clear:hover { color: var(--text); }
+
 /* ---------- keep list ---------- */
 .keep-intro { max-width: 70ch; color: var(--muted); margin-bottom: 18px; }
 .keep-intro strong { color: var(--keep); }
