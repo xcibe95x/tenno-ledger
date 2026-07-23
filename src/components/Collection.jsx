@@ -14,6 +14,7 @@ export default function Collection() {
   const [q, setQ] = useState('');
   const [cat, setCat] = useState('all');
   const [st, setSt] = useState('all');
+  const [variant, setVariant] = useState('all');
   const [sort, setSort] = useState('name');
 
   const cats = useMemo(
@@ -27,9 +28,10 @@ export default function Collection() {
       .filter(i =>
         (cat === 'all' || i.category === cat) &&
         (st === 'all' || (progress.status[i.id] ?? STATUS.MISSING) === Number(st)) &&
+        (variant === 'all' || (variant === 'prime' ? i.isPrime : !i.isPrime)) &&
         (!needle || i.name.toLowerCase().includes(needle)))
       .sort(SORTS[sort]);
-  }, [items, q, cat, st, sort, progress.status]);
+  }, [items, q, cat, st, variant, sort, progress.status]);
 
   return (
     <section>
@@ -49,6 +51,11 @@ export default function Collection() {
           <option value="2">Leveling</option>
           <option value="3">Mastered</option>
         </select>
+        <select className="inp" value={variant} onChange={e => setVariant(e.target.value)} aria-label="Prime variant">
+          <option value="all">All gear</option>
+          <option value="prime">Prime only</option>
+          <option value="standard">Non-Prime</option>
+        </select>
         <select className="inp" value={sort} onChange={e => setSort(e.target.value)} aria-label="Sort by">
           <option value="name">Sort: name</option>
           <option value="xp">Sort: mastery XP</option>
@@ -56,9 +63,13 @@ export default function Collection() {
         </select>
         <span className="filters-count">{shown.length} items · tap a card to cycle missing → farming → leveling → mastered</span>
       </div>
-      <div className="grid">
-        {shown.map(i => <ItemCard key={i.id} item={i} />)}
-      </div>
+      {shown.length === 0
+        ? <p className="empty">No equipment matches these filters.</p>
+        : (
+          <div className="grid">
+            {shown.map(i => <ItemCard key={i.id} item={i} />)}
+          </div>
+        )}
     </section>
   );
 }

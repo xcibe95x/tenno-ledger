@@ -442,6 +442,10 @@ a:hover { text-decoration: underline; }
 
 /* ---------- misc ---------- */
 .empty { color: var(--muted); padding: 40px 0; text-align: center; }
+.empty .btn { margin-top: 16px; }
+.app-crash { max-width: 520px; margin: 80px auto; padding: 0 20px; text-align: center; }
+.app-crash h1 { margin-bottom: 12px; }
+.app-crash p { color: var(--muted); margin-bottom: 20px; }
 .foot { margin-top: 40px; color: var(--muted); font-size: 11px; text-align: center; letter-spacing: 0.04em; line-height: 1.8; }
 .foot a { color: var(--muted); text-decoration: underline; }
 .foot a:hover { color: var(--text); }

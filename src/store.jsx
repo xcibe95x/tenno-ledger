@@ -35,6 +35,7 @@ function loadLocal() {
 export function StoreProvider({ children }) {
   const [items, setItems] = useState(null);
   const [nodes, setNodes] = useState({});
+  const [itemsError, setItemsError] = useState(false);
   const [progress, setProgress] = useState(loadLocal);
   const [user, setUser] = useState(null);
   const [syncState, setSyncState] = useState(supabase ? 'idle' : 'off'); // off | idle | syncing | synced | error
@@ -48,11 +49,14 @@ export function StoreProvider({ children }) {
   const drivePushTimer = useRef(null);
 
   // Item data
-  useEffect(() => {
+  const loadItems = useCallback(() => {
+    setItemsError(false);
     fetch(`${import.meta.env.BASE_URL}data/items.json`)
-      .then(r => r.json())
-      .then(d => { setItems(d.items); setNodes(d.nodes ?? {}); });
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+      .then(d => { setItems(d.items); setNodes(d.nodes ?? {}); })
+      .catch(e => { console.error('failed to load item database', e); setItemsError(true); });
   }, []);
+  useEffect(() => { loadItems(); }, [loadItems]);
 
   // Persist locally on every change
   useEffect(() => {
@@ -237,10 +241,10 @@ export function StoreProvider({ children }) {
   }, [update]);
 
   const value = useMemo(() => ({
-    items, nodes, progress, setStatus, cycleStatus, setExtraXp, importProgress, setAllStatuses, applyImport, togglePart,
+    items, nodes, itemsError, loadItems, progress, setStatus, cycleStatus, setExtraXp, importProgress, setAllStatuses, applyImport, togglePart,
     user, syncState, supabaseEnabled: !!supabase,
     driveEnabled, driveState, connectAndSyncDrive, signOutDrive,
-  }), [items, nodes, progress, setStatus, cycleStatus, setExtraXp, importProgress, setAllStatuses, applyImport, togglePart, user, syncState, driveState, connectAndSyncDrive, signOutDrive]);
+  }), [items, nodes, itemsError, loadItems, progress, setStatus, cycleStatus, setExtraXp, importProgress, setAllStatuses, applyImport, togglePart, user, syncState, driveState, connectAndSyncDrive, signOutDrive]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

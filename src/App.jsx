@@ -17,7 +17,7 @@ const TABS = [
 ];
 
 export default function App() {
-  const { items } = useStore();
+  const { items, itemsError, loadItems } = useStore();
   // Tab is kept in the URL hash so views are bookmarkable (#farm, #keep, ...)
   const initial = window.location.hash.slice(1);
   const [tab, setTabState] = useState(TABS.some(t => t.key === initial) ? initial : 'collection');
@@ -42,9 +42,16 @@ export default function App() {
         ))}
       </nav>
       <main>
-        {items === null
-          ? <p className="empty">Loading item database…</p>
-          : TABS.find(t => t.key === tab)?.el}
+        {itemsError
+          ? (
+            <div className="empty">
+              <p>Couldn’t load the item database.</p>
+              <button className="btn btn-gold" onClick={loadItems}>Retry</button>
+            </div>
+          )
+          : items === null
+            ? <p className="empty">Loading item database…</p>
+            : TABS.find(t => t.key === tab)?.el}
       </main>
       <footer className="foot">
         <p>

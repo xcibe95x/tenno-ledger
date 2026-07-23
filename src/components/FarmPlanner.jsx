@@ -33,6 +33,7 @@ function Section({ id, title, count, className, collapsed, onToggle, children })
 export default function FarmPlanner() {
   const { items, progress } = useStore();
   const [cat, setCat] = useState('all');
+  const [variant, setVariant] = useState('all');
   const [q, setQ] = useState('');
   const [collapsed, setCollapsed] = useState(loadCollapsed);
 
@@ -54,6 +55,7 @@ export default function FarmPlanner() {
     const inCat = (items ?? []).filter(i =>
       !i.unobtainable
       && (cat === 'all' || i.category === cat)
+      && (variant === 'all' || (variant === 'prime' ? i.isPrime : !i.isPrime))
       && (!needle || i.name.toLowerCase().includes(needle)));
 
     // Easiest first; ties broken by mastery value so 6000 XP frames outrank
@@ -89,7 +91,7 @@ export default function FarmPlanner() {
     }
 
     return { farming, leveling, metaPicks, tiers, totalLeft: scored.length, mr };
-  }, [items, progress.status, progress.extraXp, progress.itemXp, cat, q]);
+  }, [items, progress.status, progress.extraXp, progress.itemXp, cat, variant, q]);
 
   return (
     <section>
@@ -101,6 +103,11 @@ export default function FarmPlanner() {
         <select className="inp" value={cat} onChange={e => setCat(e.target.value)} aria-label="Category">
           <option value="all">All categories</option>
           {cats.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <select className="inp" value={variant} onChange={e => setVariant(e.target.value)} aria-label="Prime variant">
+          <option value="all">All gear</option>
+          <option value="prime">Prime only</option>
+          <option value="standard">Non-Prime</option>
         </select>
         <span className="filters-count">
           {totalLeft} items left to hunt, easiest first for MR {mr}. Items above your rank sink lower — you couldn't claim them yet.
