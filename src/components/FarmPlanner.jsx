@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../store.jsx';
 import { STATUS, masterySummary } from '../lib/mastery.js';
 import { farmInfo, TIER_ORDER, TIER_LABELS } from '../lib/farming.js';
-import { metaInfo } from '../lib/meta.js';
+import { metaInfo, TIER_ORDER as META_TIER_ORDER } from '../lib/meta.js';
 import ItemCard from './ItemCard.jsx';
 
 const COLLAPSE_KEY = 'wfh-collapsed-sections';
@@ -34,8 +34,10 @@ export default function FarmPlanner() {
   const { items, progress } = useStore();
   const [cat, setCat] = useState('all');
   const [variant, setVariant] = useState('all');
+  const [tier, setTier] = useState('all');
   const [q, setQ] = useState('');
   const [collapsed, setCollapsed] = useState(loadCollapsed);
+  const appliedDefault = useRef(false);
 
   const toggle = (id) => setCollapsed(prev => {
     const next = new Set(prev);
@@ -49,18 +51,23 @@ export default function FarmPlanner() {
     [items],
   );
 
-  const { farming, leveling, metaPicks, tiers, totalLeft, mr } = useMemo(() => {
+  const { farming, leveling, metaPicks, tiers, totalLeft, mr, sectionOrder } = useMemo(() => {
     const { mr } = masterySummary(items ?? [], progress.status, progress.extraXp, progress.itemXp);
     const needle = q.trim().toLowerCase();
     const inCat = (items ?? []).filter(i =>
       !i.unobtainable
       && (cat === 'all' || i.category === cat)
       && (variant === 'all' || (variant === 'prime' ? i.isPrime : !i.isPrime))
+      && (tier === 'all' || metaInfo(i)?.tier === tier)
       && (!needle || i.name.toLowerCase().includes(needle)));
 
     // Easiest first; ties broken by mastery value so 6000 XP frames outrank
     // 3000 XP weapons of equal effort.
     const byPayoff = (a, b) => a.farm.score - b.farm.score || b.item.totalXp - a.item.totalXp;
+    // Within meta picks, best tier first (S > A > B), then easiest to farm.
+    const byTierThenPayoff = (a, b) =>
+      META_TIER_ORDER.indexOf(metaInfo(a.item).tier) - META_TIER_ORDER.indexOf(metaInfo(b.item).tier)
+      || byPayoff(a, b);
 
     // Items you actively marked as being hunted right now — the to-do list.
     const farming = inCat
@@ -84,14 +91,33 @@ export default function FarmPlanner() {
       .sort(byPayoff);
     // Meta/OP weapons you don't own yet jump the queue: their own priority
     // section on top, pulled out of the difficulty tiers below.
-    const metaPicks = scored.filter(s => metaInfo(s.item));
+    const metaPicks = scored.filter(s => metaInfo(s.item)).sort(byTierThenPayoff);
     const tiers = new Map(TIER_ORDER.map(t => [t, []]));
     for (const s of scored) {
       if (!metaInfo(s.item)) tiers.get(s.farm.tier)?.push(s);
     }
 
-    return { farming, leveling, metaPicks, tiers, totalLeft: scored.length, mr };
-  }, [items, progress.status, progress.extraXp, progress.itemXp, cat, variant, q]);
+    // Render order of sections, filtered to the ones that'll actually show —
+    // used to default only the first accordion open on a first-ever visit.
+    const sectionOrder = [
+      farming.length && 'farming',
+      leveling.length && 'leveling',
+      metaPicks.length && 'meta',
+      ...TIER_ORDER.filter(t => tiers.get(t)?.length),
+    ].filter(Boolean);
+
+    return { farming, leveling, metaPicks, tiers, totalLeft: scored.length, mr, sectionOrder };
+  }, [items, progress.status, progress.extraXp, progress.itemXp, cat, variant, tier, q]);
+
+  // First-ever visit (nothing saved yet): collapse every section but the
+  // first one once we know the real render order. Runs once.
+  useEffect(() => {
+    if (appliedDefault.current) return;
+    if (localStorage.getItem(COLLAPSE_KEY) != null) { appliedDefault.current = true; return; }
+    if (sectionOrder.length === 0) return;
+    appliedDefault.current = true;
+    setCollapsed(new Set(sectionOrder.slice(1)));
+  }, [sectionOrder]);
 
   return (
     <section>
@@ -108,6 +134,10 @@ export default function FarmPlanner() {
           <option value="all">All gear</option>
           <option value="prime">Prime only</option>
           <option value="standard">Non-Prime</option>
+        </select>
+        <select className="inp" value={tier} onChange={e => setTier(e.target.value)} aria-label="Meta tier">
+          <option value="all">All tiers</option>
+          {META_TIER_ORDER.map(t => <option key={t} value={t}>{t}-Tier only</option>)}
         </select>
         <span className="filters-count">
           {totalLeft} items left to hunt, easiest first for MR {mr}. Items above your rank sink lower — you couldn't claim them yet.
@@ -128,7 +158,7 @@ export default function FarmPlanner() {
       )}
 
       {metaPicks.length > 0 && (
-        <Section id="meta" title="★ Meta picks — farm these first" count={metaPicks.length} className="tier-meta" collapsed={collapsed.has('meta')} onToggle={toggle}>
+        <Section id="meta" title="★ Meta picks (S/A/B) — farm these first" count={metaPicks.length} className="tier-meta" collapsed={collapsed.has('meta')} onToggle={toggle}>
           {metaPicks.map(({ item, farm }) => <ItemCard key={item.id} item={item} farm={farm} />)}
         </Section>
       )}

@@ -4,20 +4,23 @@ import Header from './components/Header.jsx';
 import WorldClock from './components/WorldClock.jsx';
 import Collection from './components/Collection.jsx';
 import FarmPlanner from './components/FarmPlanner.jsx';
+import MrPath from './components/MrPath.jsx';
 import Mods from './components/Mods.jsx';
 import KeepList from './components/KeepList.jsx';
 import Settings from './components/Settings.jsx';
+import { GAME_VERSION } from './lib/meta.js';
 
 const TABS = [
   { key: 'collection', label: 'Collection', el: <Collection /> },
   { key: 'farm', label: 'Farm planner', el: <FarmPlanner /> },
+  { key: 'mrpath', label: 'MR path', el: <MrPath /> },
   { key: 'keep', label: 'Keep list', el: <KeepList /> },
   { key: 'mods', label: 'Mods', el: <Mods /> },
   { key: 'settings', label: 'Settings', el: <Settings /> },
 ];
 
 export default function App() {
-  const { items, itemsError, loadItems } = useStore();
+  const { items, itemsError, loadItems, dataGeneratedAt } = useStore();
   // Tab is kept in the URL hash so views are bookmarkable (#farm, #keep, ...)
   const initial = window.location.hash.slice(1);
   const [tab, setTabState] = useState(TABS.some(t => t.key === initial) ? initial : 'collection');
@@ -61,6 +64,10 @@ export default function App() {
         <p>
           Not affiliated with Warframe or Digital Extremes. Warframe and all related properties are trademarks of Digital Extremes Ltd.
           Data: WFCD warframe-items · images: cdn.warframestat.us
+        </p>
+        <p>
+          Tracking game version: {GAME_VERSION}
+          {dataGeneratedAt && ` · item data refreshed ${new Date(dataGeneratedAt).toLocaleDateString()}`}
         </p>
       </footer>
     </div>

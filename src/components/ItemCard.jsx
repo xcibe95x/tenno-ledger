@@ -59,6 +59,7 @@ export default function ItemCard({ item, farm }) {
   const { progress, cycleStatus, togglePart } = useStore();
   const st = progress.status[item.id] ?? STATUS.MISSING;
   const keepFor = (item.ingredientFor ?? []).filter(f => (progress.status[f.id] ?? 0) < STATUS.OWNED);
+  const isKeep = keepFor.length > 0 && st >= STATUS.OWNED;
   const { parts, materials } = farm ? recipe(item) : { parts: [], materials: [] };
   const owned = progress.parts?.[item.id] ?? {};
   const [tip, setTip] = useState(null);
@@ -69,7 +70,7 @@ export default function ItemCard({ item, farm }) {
   };
 
   return (
-    <article className={`card st-${st}`}>
+    <article className={`card st-${st} ${isKeep ? 'card-keep' : ''}`}>
       <button
         className="card-hit"
         onClick={() => cycleStatus(item.id)}
@@ -92,13 +93,17 @@ export default function ItemCard({ item, farm }) {
           </div>
           <div className="card-badges">
             <span className={`badge badge-st${st}`}>{STATUS_LABELS[st]}</span>
-            {metaInfo(item) && <span className="badge badge-meta" title={metaInfo(item)}>★ Meta</span>}
+            {metaInfo(item) && (
+              <span className={`badge badge-meta badge-meta-${metaInfo(item).tier}`} title={metaInfo(item).note}>
+                {metaInfo(item).tier}-Tier
+              </span>
+            )}
             {item.isPrime && <span className="badge badge-prime">Prime</span>}
             {item.vaulted && <span className="badge badge-vault">Vaulted</span>}
             {item.unobtainable && <span className="badge badge-vault">Founders</span>}
-            {keepFor.length > 0 && st >= STATUS.OWNED && (
+            {isKeep && (
               <span className="badge badge-keep" title={keepFor.map(f => `${f.count}× needed for ${f.name}`).join('\n')}>
-                Keep · {keepFor.map(f => f.name).join(', ')}
+                ⚠ Keep · {keepFor.map(f => f.name).join(', ')}
               </span>
             )}
           </div>

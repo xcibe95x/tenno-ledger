@@ -36,6 +36,9 @@ const MASTERABLE_OVERRIDES = new Set([
   'Lega Prism', 'Klamora Prism', 'Cantic Prism',
   'Sporelacer', 'Vermisplicer',
   'Venari', 'Venari Prime', // Khora's kavat grants 6000 mastery
+  // Titania's Razorwing exalted weapons are the only exalted weapons that
+  // grant mastery on their own (3000 XP each, on top of her 6000).
+  'Dex Pixia', 'Dex Pixia Prime', 'Diwata', 'Diwata Prime',
 ]);
 
 // 200 XP per rank for "vehicle/companion/frame"-type product categories,

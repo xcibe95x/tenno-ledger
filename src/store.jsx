@@ -35,6 +35,7 @@ function loadLocal() {
 export function StoreProvider({ children }) {
   const [items, setItems] = useState(null);
   const [nodes, setNodes] = useState({});
+  const [dataGeneratedAt, setDataGeneratedAt] = useState(null);
   const [itemsError, setItemsError] = useState(false);
   const [progress, setProgress] = useState(loadLocal);
   const [user, setUser] = useState(null);
@@ -53,7 +54,7 @@ export function StoreProvider({ children }) {
     setItemsError(false);
     fetch(`${import.meta.env.BASE_URL}data/items.json`)
       .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
-      .then(d => { setItems(d.items); setNodes(d.nodes ?? {}); })
+      .then(d => { setItems(d.items); setNodes(d.nodes ?? {}); setDataGeneratedAt(d.generatedAt ?? null); })
       .catch(e => { console.error('failed to load item database', e); setItemsError(true); });
   }, []);
   useEffect(() => { loadItems(); }, [loadItems]);
@@ -243,8 +244,8 @@ export function StoreProvider({ children }) {
   const value = useMemo(() => ({
     items, nodes, itemsError, loadItems, progress, setStatus, cycleStatus, setExtraXp, importProgress, setAllStatuses, applyImport, togglePart,
     user, syncState, supabaseEnabled: !!supabase,
-    driveEnabled, driveState, connectAndSyncDrive, signOutDrive,
-  }), [items, nodes, itemsError, loadItems, progress, setStatus, cycleStatus, setExtraXp, importProgress, setAllStatuses, applyImport, togglePart, user, syncState, driveState, connectAndSyncDrive, signOutDrive]);
+    driveEnabled, driveState, connectAndSyncDrive, signOutDrive, dataGeneratedAt,
+  }), [items, nodes, itemsError, loadItems, progress, setStatus, cycleStatus, setExtraXp, importProgress, setAllStatuses, applyImport, togglePart, user, syncState, driveState, connectAndSyncDrive, signOutDrive, dataGeneratedAt]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
