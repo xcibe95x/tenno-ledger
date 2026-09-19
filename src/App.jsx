@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useStore } from './store.jsx';
 import Header from './components/Header.jsx';
 import WorldClock from './components/WorldClock.jsx';
@@ -28,6 +28,20 @@ export default function App() {
     window.location.hash = key;
     setTabState(key);
   };
+
+  // "/" jumps straight to the current tab's search box, unless you're already
+  // typing somewhere (an input, textarea, or contenteditable).
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return;
+      const tag = document.activeElement?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
+      const search = document.querySelector('.inp-search');
+      if (search) { e.preventDefault(); search.focus(); }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   return (
     <div className="app">

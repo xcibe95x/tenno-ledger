@@ -3,6 +3,7 @@ import { useStore } from '../store.jsx';
 import { STATUS, masterySummary } from '../lib/mastery.js';
 import { farmInfo, TIER_ORDER, TIER_LABELS } from '../lib/farming.js';
 import { metaInfo, TIER_ORDER as META_TIER_ORDER } from '../lib/meta.js';
+import { usePersisted } from '../lib/usePersisted.js';
 import ItemCard from './ItemCard.jsx';
 
 const COLLAPSE_KEY = 'wfh-collapsed-sections';
@@ -32,9 +33,9 @@ function Section({ id, title, count, className, collapsed, onToggle, children })
 
 export default function FarmPlanner() {
   const { items, progress } = useStore();
-  const [cat, setCat] = useState('all');
-  const [variant, setVariant] = useState('all');
-  const [tier, setTier] = useState('all');
+  const [cat, setCat] = usePersisted('wfh-farm-cat', 'all');
+  const [variant, setVariant] = usePersisted('wfh-farm-variant', 'all');
+  const [tier, setTier] = usePersisted('wfh-farm-tier', 'all');
   const [q, setQ] = useState('');
   const [collapsed, setCollapsed] = useState(loadCollapsed);
   const appliedDefault = useRef(false);

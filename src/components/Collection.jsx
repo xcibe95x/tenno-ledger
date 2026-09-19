@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useStore } from '../store.jsx';
 import { STATUS } from '../lib/mastery.js';
+import { usePersisted } from '../lib/usePersisted.js';
 import ItemCard from './ItemCard.jsx';
 
 const SORTS = {
@@ -12,10 +13,10 @@ const SORTS = {
 export default function Collection() {
   const { items, progress } = useStore();
   const [q, setQ] = useState('');
-  const [cat, setCat] = useState('all');
-  const [st, setSt] = useState('all');
-  const [variant, setVariant] = useState('all');
-  const [sort, setSort] = useState('name');
+  const [cat, setCat] = usePersisted('wfh-collection-cat', 'all');
+  const [st, setSt] = usePersisted('wfh-collection-status', 'all');
+  const [variant, setVariant] = usePersisted('wfh-collection-variant', 'all');
+  const [sort, setSort] = usePersisted('wfh-collection-sort', 'name');
 
   const cats = useMemo(
     () => [...new Set((items ?? []).map(i => i.category))].sort(),

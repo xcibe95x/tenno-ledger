@@ -40,6 +40,14 @@ function buildPlan(items, progress, targetMr) {
   return { currentXp, currentMr, targetXp, plan, stillShort, shortfall: Math.max(0, targetXp - runningXp) };
 }
 
+function planToText(plan, target) {
+  const lines = [`Warframe MR path to ${mrLabel(target)}:`, ''];
+  plan.forEach(({ item, gain, farm }, idx) => {
+    lines.push(`${idx + 1}. [ ] ${item.name} — +${gain.toLocaleString()} XP (${farm.reason})`);
+  });
+  return lines.join('\n');
+}
+
 export default function MrPath() {
   const { items, progress } = useStore();
   const { mr: currentMr } = useMemo(
@@ -47,11 +55,19 @@ export default function MrPath() {
     [items, progress.status, progress.extraXp, progress.itemXp],
   );
   const [target, setTarget] = useState(() => Math.min(40, currentMr + 1));
+  const [copied, setCopied] = useState(false);
 
   const { currentXp, targetXp, plan, stillShort, shortfall } = useMemo(
     () => buildPlan(items ?? [], progress, target),
     [items, progress, target],
   );
+
+  const copyPlan = () => {
+    navigator.clipboard.writeText(planToText(plan, target)).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    });
+  };
 
   if (!items) return null;
 
@@ -71,6 +87,9 @@ export default function MrPath() {
           You're {mrLabel(currentMr)} ({currentXp.toLocaleString()} XP). {mrLabel(target)} needs {targetXp.toLocaleString()} XP —
           {' '}{plan.length} item{plan.length === 1 ? '' : 's'} below, ranked by XP earned per unit of farming effort.
         </span>
+        {plan.length > 0 && (
+          <button className="btn" onClick={copyPlan}>{copied ? 'Copied ✓' : 'Copy plan'}</button>
+        )}
       </div>
 
       {stillShort && (
