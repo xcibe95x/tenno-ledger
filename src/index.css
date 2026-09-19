@@ -270,6 +270,7 @@ a:hover { text-decoration: underline; }
   display: flex; gap: 10px; justify-content: space-between; align-items: baseline;
 }
 .card-farm a { flex: none; }
+.card-links { display: flex; gap: 10px; margin-left: auto; flex: none; }
 .farm-where { display: block; margin-top: 3px; color: var(--keep); font-size: 12px; }
 
 .card-parts {

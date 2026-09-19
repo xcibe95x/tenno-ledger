@@ -5,6 +5,7 @@ import { STATUS, STATUS_LABELS } from '../lib/mastery.js';
 import { isCraftedPart } from '../lib/farming.js';
 import { metaInfo } from '../lib/meta.js';
 import { resourceFarm, itemSource } from '../lib/resources.js';
+import { marketUrl } from '../lib/market.js';
 import MrBadge from './MrBadge.jsx';
 
 // Touch devices synthesize a hover on first tap, which can swallow the tap that
@@ -109,13 +110,18 @@ export default function ItemCard({ item, farm }) {
           </div>
         </div>
       </button>
-      {farm && (
+      {(farm || item.wikiaUrl || item.tradable) && (
         <div className="card-farm">
-          <p>
-            {farm.reason}
-            {farm.where && <span className="farm-where">{farm.where}</span>}
-          </p>
-          {item.wikiaUrl && <a href={item.wikiaUrl} target="_blank" rel="noreferrer">wiki ↗</a>}
+          {farm && (
+            <p>
+              {farm.reason}
+              {farm.where && <span className="farm-where">{farm.where}</span>}
+            </p>
+          )}
+          <div className="card-links">
+            {item.wikiaUrl && <a href={item.wikiaUrl} target="_blank" rel="noreferrer">wiki ↗</a>}
+            {item.tradable && <a href={marketUrl(item)} target="_blank" rel="noreferrer">market ↗</a>}
+          </div>
         </div>
       )}
       {parts.length > 0 && (
