@@ -168,19 +168,6 @@ a:hover { text-decoration: underline; }
   border-color: color-mix(in srgb, var(--wc-c) 50%, transparent);
   box-shadow: 0 0 10px color-mix(in srgb, var(--wc-c) 28%, transparent);
 }
-.wc-hot-dot {
-  display: inline-block; width: 6px; height: 6px; border-radius: 50%;
-  margin-right: 5px; background: var(--wc-c);
-  box-shadow: 0 0 6px var(--wc-c);
-  animation: wc-pulse 1.6s ease-in-out infinite;
-}
-@keyframes wc-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.45; transform: scale(0.75); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .wc-hot-dot { animation: none; }
-}
 .wc-more { color: var(--muted); border-style: dashed; }
 @media (hover: hover) { .wc-more:hover { color: var(--text); border-color: var(--gold-dim); } }
 

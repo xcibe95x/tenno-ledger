@@ -156,7 +156,6 @@ export default function WorldClock() {
             onClick={() => toggle(c)}
             onMouseEnter={CAN_HOVER ? () => setActive(c) : undefined}
           >
-            {c.hot && <span className="wc-hot-dot" aria-hidden="true" />}
             {c.label}{timeLeft(c.expiry) ? <b> {timeLeft(c.expiry)}</b> : null}
           </button>
         ))}
