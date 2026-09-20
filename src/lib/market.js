@@ -11,7 +11,9 @@ function slugify(name) {
 }
 
 export function marketUrl(item) {
-  if (!item.tradable) return null;
+  // Prime gear itself is never flagged tradable (you can't trade a built
+  // Warframe), but its parts are always tradable as a "set" listing.
+  if (!item.tradable && !item.isPrime) return null;
   // Prime gear trades as a bundled "set" listing (all parts + blueprint);
   // Vandal/Wraith/syndicate weapons trade as the single finished item.
   const slug = slugify(item.name) + (item.isPrime ? '_set' : '');
