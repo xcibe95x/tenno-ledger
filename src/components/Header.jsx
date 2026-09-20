@@ -3,17 +3,14 @@ import { masterySummary, mrLabel } from '../lib/mastery.js';
 import { signInWithGoogle, signOut } from '../lib/supabase.js';
 import MrBadge from './MrBadge.jsx';
 
-const SEGMENTS = 24;
-
 export default function Header() {
   const { items, progress, user, syncState, supabaseEnabled, driveEnabled, driveState, connectAndSyncDrive } = useStore();
   const sum = masterySummary(items ?? [], progress.status, progress.extraXp, progress.itemXp);
-  const filled = Math.round(sum.nextPct * SEGMENTS);
 
   return (
     <header className="hdr">
       <div className="hdr-title">
-        <h1>Tenno&nbsp;Ledger</h1>
+        <h1>Tenno <span>Ledger</span></h1>
         <p className="hdr-sub">mastery · farming · keep-list</p>
       </div>
 
@@ -25,9 +22,7 @@ export default function Header() {
             <span className="mr-next">{sum.toNext.toLocaleString()} XP to {mrLabel(sum.mr + 1)}</span>
           </div>
           <div className="mr-bar" role="progressbar" aria-valuenow={Math.round(sum.nextPct * 100)} aria-valuemin={0} aria-valuemax={100} aria-label="Progress to next mastery rank">
-            {Array.from({ length: SEGMENTS }, (_, i) => (
-              <span key={i} className={`mr-seg ${i < filled ? 'on' : ''}`} />
-            ))}
+            <div className="mr-bar-fill" style={{ width: `${Math.round(sum.nextPct * 100)}%` }} />
           </div>
           <div className="mr-stats">
             <span>{sum.masteredCount} / {sum.itemCount} mastered</span>

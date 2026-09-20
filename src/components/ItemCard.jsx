@@ -1,18 +1,11 @@
-import { useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store.jsx';
-import { STATUS, STATUS_LABELS } from '../lib/mastery.js';
+import { STATUS } from '../lib/mastery.js';
 import { isCraftedPart } from '../lib/farming.js';
 import { metaInfo } from '../lib/meta.js';
 import { resourceFarm, itemSource } from '../lib/resources.js';
 import { marketUrl } from '../lib/market.js';
 import MrBadge from './MrBadge.jsx';
-
-// Touch devices synthesize a hover on first tap, which can swallow the tap that
-// should toggle a part. Only wire the hover tooltip on hover-capable pointers so
-// a tap on touch goes straight to togglePart.
-const CAN_HOVER = typeof window !== 'undefined'
-  && window.matchMedia?.('(hover: hover)').matches;
 
 const IMG = 'https://cdn.warframestat.us/img/';
 
@@ -56,26 +49,44 @@ function chancePct(chance) {
   return `${(c * 100).toFixed(c < 0.1 ? 1 : 0)}%`;
 }
 
+const STATUS_LABELS = ['Missing', 'Farming', 'Leveling', 'Mastered'];
+
 export default function ItemCard({ item, farm }) {
-  const { progress, cycleStatus, togglePart } = useStore();
+  const { progress, cycleStatus, setStatus, togglePart } = useStore();
   const st = progress.status[item.id] ?? STATUS.MISSING;
   const keepFor = (item.ingredientFor ?? []).filter(f => (progress.status[f.id] ?? 0) < STATUS.OWNED);
   const isKeep = keepFor.length > 0 && st >= STATUS.OWNED;
   const { parts, materials } = farm ? recipe(item) : { parts: [], materials: [] };
   const owned = progress.parts?.[item.id] ?? {};
-  const [tip, setTip] = useState(null);
+  const [activePart, setActivePart] = useState(null);
+  const activePartInfo = parts.find(p => p.id === activePart);
+  const activeMatInfo = !activePartInfo
+    ? materials.filter(m => m.id === activePart).map(m => ({ ...m, farm: resourceFarm(m.name) }))[0]
+    : null;
 
-  const showTip = (e, p) => {
-    const r = e.currentTarget.getBoundingClientRect();
-    setTip({ x: r.left + r.width / 2, y: r.top - 8, part: p });
-  };
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const close = (e) => { if (!menuRef.current?.contains(e.target)) setMenuOpen(false); };
+    window.addEventListener('pointerdown', close);
+    return () => window.removeEventListener('pointerdown', close);
+  }, [menuOpen]);
 
   return (
     <article className={`card st-${st} ${isKeep ? 'card-keep' : ''}`}>
-      <button
+      {item.masteryReq > 0 && (
+        <span className="card-mr-corner" title={`Requires Mastery Rank ${item.masteryReq}`}>
+          <MrBadge mr={item.masteryReq} size={14} />
+          {item.masteryReq}
+        </span>
+      )}
+      <div
         className="card-hit"
+        role="button" tabIndex={0}
         onClick={() => cycleStatus(item.id)}
-        title={`${item.name}: ${STATUS_LABELS[st]} — tap to change (missing → farming → leveling → mastered)`}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); cycleStatus(item.id); } }}
+        title={`${item.name}: ${STATUS_LABELS[st]} — click to advance to ${STATUS_LABELS[(st + 1) % 4]}`}
       >
         <div className="card-img">
           {item.imageName && <img loading="lazy" src={IMG + item.imageName} alt="" />}
@@ -84,24 +95,34 @@ export default function ItemCard({ item, farm }) {
           <div className="card-name">{item.name}</div>
           <div className="card-meta">
             <span>{item.type ?? item.category}</span>
-            {item.masteryReq > 0 && (
-              <span className="card-mr">
-                <MrBadge mr={item.masteryReq} size={16} />
-                MR {item.masteryReq}
-              </span>
-            )}
             <span>{item.totalXp.toLocaleString()} XP</span>
           </div>
           <div className="card-badges">
-            <span className={`badge badge-st${st}`}>{STATUS_LABELS[st]}</span>
-            {metaInfo(item) && (
-              <span className={`badge badge-meta badge-meta-${metaInfo(item).tier}`} title={metaInfo(item).note}>
-                {metaInfo(item).tier}-Tier
+            <span className="status-dropdown-wrap" ref={menuRef}>
+              <span
+                role="button" tabIndex={0}
+                className={`badge badge-st${st} status-pill`}
+                title={`${STATUS_LABELS[st]} — click to pick a status`}
+                onClick={(e) => { e.stopPropagation(); setMenuOpen(o => !o); }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); setMenuOpen(o => !o); } }}
+              >
+                {STATUS_LABELS[st]} <span className="status-pill-arrow">▾</span>
               </span>
-            )}
-            {item.isPrime && <span className="badge badge-prime">Prime</span>}
-            {item.vaulted && <span className="badge badge-vault">Vaulted</span>}
-            {item.unobtainable && <span className="badge badge-vault">Founders</span>}
+              {menuOpen && (
+                <span className="status-menu" onClick={(e) => e.stopPropagation()}>
+                  {STATUS_LABELS.map((label, i) => (
+                    <button
+                      key={label}
+                      type="button"
+                      className={`status-menu-item st-${i} ${st === i ? 'is-active' : ''}`}
+                      onClick={() => { setStatus(item.id, i); setMenuOpen(false); }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </span>
+              )}
+            </span>
             {isKeep && (
               <span className="badge badge-keep" title={keepFor.map(f => `${f.count}× needed for ${f.name}`).join('\n')}>
                 ⚠ Keep · {keepFor.map(f => f.name).join(', ')}
@@ -109,15 +130,27 @@ export default function ItemCard({ item, farm }) {
             )}
           </div>
         </div>
-      </button>
-      {(farm || item.wikiaUrl || item.tradable) && (
+      </div>
+      {(farm || item.wikiaUrl || item.tradable || item.isPrime || item.vaulted || item.unobtainable || metaInfo(item)) && (
         <div className="card-farm">
-          {farm && (
-            <p>
-              {farm.reason}
-              {farm.where && <span className="farm-where">{farm.where}</span>}
-            </p>
-          )}
+          <div className="card-farm-left">
+            <div className="card-tags">
+              {item.isPrime && <span className="tag tag-prime">Prime</span>}
+              {item.vaulted && <span className="tag tag-vault">Vaulted</span>}
+              {item.unobtainable && <span className="tag tag-vault">Founders</span>}
+              {metaInfo(item) && (
+                <span className={`tag tag-meta-${metaInfo(item).tier}`} title={metaInfo(item).note}>
+                  {metaInfo(item).tier}-Tier
+                </span>
+              )}
+            </div>
+            {farm && (
+              <p>
+                {farm.reason}
+                {farm.where && <span className="farm-where">{farm.where}</span>}
+              </p>
+            )}
+          </div>
           <div className="card-links">
             {item.wikiaUrl && <a href={item.wikiaUrl} target="_blank" rel="noreferrer">wiki ↗</a>}
             {item.tradable && <a href={marketUrl(item)} target="_blank" rel="noreferrer">market ↗</a>}
@@ -130,71 +163,67 @@ export default function ItemCard({ item, farm }) {
             <button
               key={p.id}
               type="button"
-              className={`part-chip ${owned[p.id] ? 'part-owned' : ''}`}
-              onClick={(e) => { e.stopPropagation(); togglePart(item.id, p.id); }}
-              onMouseEnter={CAN_HOVER ? (e) => showTip(e, p) : undefined}
-              onMouseLeave={CAN_HOVER ? () => setTip(null) : undefined}
-              onFocus={(e) => showTip(e, p)}
-              onBlur={() => setTip(null)}
+              className={`part-chip ${owned[p.id] ? 'part-owned' : ''} ${activePart === p.id ? 'is-active' : ''}`}
+              title={`${owned[p.id] ? 'Mark not acquired' : 'Mark acquired'} — tap the ⓘ for where to farm`}
+              onClick={() => togglePart(item.id, p.id)}
             >
               {owned[p.id]
                 ? <span className="chip-check">✓</span>
                 : p.imageName && <img className="chip-icon" loading="lazy" src={IMG + p.imageName} alt="" />}
               {p.count > 1 ? `${p.count}× ` : ''}{p.name}
+              <span
+                className="chip-info"
+                role="button" tabIndex={0}
+                aria-label={`Where to find ${p.name}`}
+                aria-expanded={activePart === p.id}
+                onClick={(e) => { e.stopPropagation(); setActivePart(activePart === p.id ? null : p.id); }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); setActivePart(activePart === p.id ? null : p.id); } }}
+              >
+                ⓘ
+              </span>
             </button>
           ))}
         </div>
       )}
-      {materials.length > 0 && (
-        <div className="card-parts card-materials">
-          {materials.map(m => {
-            const farm = resourceFarm(m.name);
-            return (
-              <span
-                key={m.id}
-                className="part-chip part-mat"
-                title={`${m.count > 1 ? `${m.count.toLocaleString()}× ` : ''}${m.name}${farm ? ` — ${farm}` : ''}`}
-                onMouseEnter={CAN_HOVER ? (e) => showTip(e, { ...m, mat: true, farm }) : undefined}
-                onMouseLeave={CAN_HOVER ? () => setTip(null) : undefined}
-              >
-                {m.imageName && <img className="chip-icon" loading="lazy" src={IMG + m.imageName} alt="" />}
-                {m.count > 1 ? `${m.count.toLocaleString()}× ` : ''}{m.name}
-              </span>
-            );
-          })}
-        </div>
-      )}
-      {tip && createPortal(
-        <div
-          className="tipbox"
-          style={{
-            left: Math.min(Math.max(tip.x, 150), window.innerWidth - 150),
-            top: Math.max(tip.y, 60),
-          }}
-        >
-          <div className="tipbox-title">
-            {tip.part.count > 1 ? `${(tip.part.mat ? tip.part.count.toLocaleString() : tip.part.count)}× ` : ''}{tip.part.name}
-            {tip.part.mat
-              ? <span className="tipbox-state"> — build material</span>
-              : <span className="tipbox-state">{owned[tip.part.id] ? ' — acquired ✓' : ' — click to mark acquired'}</span>}
-          </div>
-          {tip.part.drops.length > 0 ? (
-            tip.part.drops.map((d, i) => (
-              <div key={i} className="tipbox-line">
+      {activePartInfo && (
+        <div className="drop-panel">
+          <div className="drop-panel-title">{activePartInfo.name} — where to farm</div>
+          {activePartInfo.drops.length > 0 ? (
+            activePartInfo.drops.map((d, i) => (
+              <div key={i} className="drop-line">
                 {d.location}{d.chance != null && <b> {chancePct(d.chance)}</b>}
               </div>
             ))
-          ) : tip.part.farm ? (
-            <div className="tipbox-line">{tip.part.farm}</div>
-          ) : tip.part.mat ? (
-            <div className="tipbox-line">Farm spot not mapped yet — check the wiki for the best node</div>
           ) : itemSource(item.name) ? (
-            <div className="tipbox-line">From {itemSource(item.name)}</div>
+            <div className="drop-line">From {itemSource(item.name)}</div>
           ) : (
-            <div className="tipbox-line">No drop table — see the wiki for the exact source</div>
+            <div className="drop-line">No drop table on record — check the wiki for the exact source</div>
           )}
-        </div>,
-        document.body,
+        </div>
+      )}
+      {materials.length > 0 && (
+        <div className="card-parts card-materials">
+          {materials.map(m => (
+            <button
+              key={m.id}
+              type="button"
+              className={`part-chip part-mat ${activePart === m.id ? 'is-active' : ''}`}
+              aria-expanded={activePart === m.id}
+              onClick={() => setActivePart(activePart === m.id ? null : m.id)}
+            >
+              {m.imageName && <img className="chip-icon" loading="lazy" src={IMG + m.imageName} alt="" />}
+              {m.count > 1 ? `${m.count.toLocaleString()}× ` : ''}{m.name}
+            </button>
+          ))}
+        </div>
+      )}
+      {activeMatInfo && (
+        <div className="drop-panel">
+          <div className="drop-panel-title">
+            {activeMatInfo.count > 1 ? `${activeMatInfo.count.toLocaleString()}× ` : ''}{activeMatInfo.name} — build material
+          </div>
+          <div className="drop-line">{activeMatInfo.farm ?? 'Farm spot not mapped yet — check the wiki for the best node'}</div>
+        </div>
       )}
     </article>
   );

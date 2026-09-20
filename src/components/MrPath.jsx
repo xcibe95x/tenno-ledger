@@ -74,21 +74,20 @@ export default function MrPath() {
   return (
     <section>
       <div className="filters">
-        <label className="mrpath-target">
-          Reach
-          <select className="inp" value={target} onChange={e => setTarget(Number(e.target.value))} aria-label="Target mastery rank">
-            {Array.from({ length: 40 }, (_, i) => i + 1).map(n => (
-              <option key={n} value={n} disabled={n <= currentMr}>{mrLabel(n)}</option>
+        <div className="field">
+          <label className="field-label" htmlFor="mrpath-target">Reach</label>
+          <select id="mrpath-target" className="inp" value={target} onChange={e => setTarget(Number(e.target.value))}>
+            {Array.from({ length: 40 }, (_, i) => i + 1).filter(n => n > currentMr).map(n => (
+              <option key={n} value={n}>{mrLabel(n)}</option>
             ))}
           </select>
-          as fast as possible
-        </label>
+        </div>
         <span className="filters-count">
           You're {mrLabel(currentMr)} ({currentXp.toLocaleString()} XP). {mrLabel(target)} needs {targetXp.toLocaleString()} XP —
           {' '}{plan.length} item{plan.length === 1 ? '' : 's'} below, ranked by XP earned per unit of farming effort.
         </span>
         {plan.length > 0 && (
-          <button className="btn" onClick={copyPlan}>{copied ? 'Copied ✓' : 'Copy plan'}</button>
+          <button className="btn btn-gold filters-cta" onClick={copyPlan}>{copied ? 'Copied ✓' : 'Copy plan'}</button>
         )}
       </div>
 

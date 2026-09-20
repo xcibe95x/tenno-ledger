@@ -167,6 +167,14 @@ export function farmInfo(item, userMr = null) {
     // mysteryParts block below prices the grind and names the source; don't also
     // add the flat "unknown acquisition" charge or it double-counts (necramechs).
     reason = 'Built from farmed parts';
+  } else if (item.productCategory === 'KubrowPets') {
+    // Kavats/Kubrows/Vulpaphyla/Predasites carry no components or drops at
+    // all in this dataset — bred, not crafted. The flat "quest/vendor" score
+    // below would badly underrate them: they need an RNG-gated wild scan for
+    // a Genetic Code, then a real-time ~24h Incubator wait, which is a
+    // bigger time cost than most drop farms.
+    score += 48;
+    reason = 'Bred, not farmed — scan the wild variant for a Genetic Code, then breed at the Incubator (~24h wait)';
   } else {
     score += 40;
     reason = 'Quest, vendor or bundle reward — see the wiki page';
