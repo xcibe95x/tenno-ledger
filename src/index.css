@@ -468,6 +468,7 @@ a:hover { text-decoration: underline; }
 
 .mod-tier-hint { color: var(--muted); font-size: 12.5px; max-width: 80ch; margin: -4px 0 14px; }
 
+.mod-toggles { display: flex; align-items: center; gap: 14px; height: 34px; }
 .mod-toggle { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12.5px; cursor: pointer; white-space: nowrap; }
 .mod-toggle input {
   accent-color: var(--gold); cursor: pointer;

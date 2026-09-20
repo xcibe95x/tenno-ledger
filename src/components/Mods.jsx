@@ -78,7 +78,7 @@ export default function Mods() {
   const [q, setQ] = useState('');
   const [slot, setSlot] = useState('all');
   const [tier, setTier] = useState('all');
-  const [metaOnly, setMetaOnly] = useState(true);
+  const [metaOnly, setMetaOnly] = useState(false);
   const [hideOwned, setHideOwned] = useState(false);
 
   // Lazy-load the roster only when this tab is first opened.
@@ -118,9 +118,7 @@ export default function Mods() {
           || (m.compat ?? '').toLowerCase().includes(needle)
           || (meta?.effect ?? '').toLowerCase().includes(needle);
       }
-      // Picking a tier chip browses that whole family — meta-only only governs
-      // the unfiltered default view.
-      if (metaOnly && tier === 'all' && !META.has(m.name)) return false;
+      if (metaOnly && !META.has(m.name)) return false;
       return true;
     };
     const visible = all.filter(match);
@@ -158,22 +156,34 @@ export default function Mods() {
   return (
     <section>
       <div className="filters">
-        <input
-          className="inp inp-search" type="search" placeholder="Search mods…"
-          value={q} onChange={e => setQ(e.target.value)} aria-label="Search mods"
-        />
-        <select className="inp" value={slot} onChange={e => setSlot(e.target.value)} aria-label="Type">
-          <option value="all">All types</option>
-          {SLOT_ORDER.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
-        <label className="mod-toggle">
-          <input type="checkbox" checked={metaOnly} onChange={e => setMetaOnly(e.target.checked)} />
-          Meta only
-        </label>
-        <label className="mod-toggle">
-          <input type="checkbox" checked={hideOwned} onChange={e => setHideOwned(e.target.checked)} />
-          Hide owned
-        </label>
+        <div className="field">
+          <label className="field-label" htmlFor="mod-search">Search</label>
+          <input
+            id="mod-search"
+            className="inp inp-search" type="search" placeholder="Search mods…"
+            value={q} onChange={e => setQ(e.target.value)}
+          />
+        </div>
+        <div className="field">
+          <label className="field-label" htmlFor="mod-slot">Type</label>
+          <select id="mod-slot" className="inp" value={slot} onChange={e => setSlot(e.target.value)}>
+            <option value="all">All types</option>
+            {SLOT_ORDER.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+        <div className="field">
+          <span className="field-label">Show</span>
+          <div className="mod-toggles">
+            <label className="mod-toggle">
+              <input type="checkbox" checked={metaOnly} onChange={e => setMetaOnly(e.target.checked)} />
+              Meta only
+            </label>
+            <label className="mod-toggle">
+              <input type="checkbox" checked={hideOwned} onChange={e => setHideOwned(e.target.checked)} />
+              Hide owned
+            </label>
+          </div>
+        </div>
         <span className="filters-count">
           {q.trim()
             ? `${shown} of ${mods.length} mods match “${q.trim()}” — search always spans the full roster.`

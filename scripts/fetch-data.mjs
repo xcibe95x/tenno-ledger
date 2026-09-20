@@ -228,6 +228,9 @@ const MOD_SLOT = {
 const CHINA_EXCLUSIVE = new Set([
   '/Lotus/Upgrades/Mods/Warframe/Expert/AvatarAbilityEfficiencyModExpert', // Primed Streamline
   '/Lotus/Upgrades/Mods/Archwing/Rifle/Expert/ArchwingWeaponElectricityDamageModExpert', // Primed Electrified Barrel
+  '/Lotus/Upgrades/Mods/Warframe/Expert/AvatarShieldRechargeRateModExpert', // Primed Fast Deflection
+  '/Lotus/Upgrades/Mods/Shotgun/Expert/WeaponCritChanceModExpert', // Primed Blunderbuss
+  '/Lotus/Upgrades/Mods/Rifle/Expert/SniperReloadDamageModExpert', // Primed Charged Chamber
 ]);
 
 const seenMods = new Set();
