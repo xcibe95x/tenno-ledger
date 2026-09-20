@@ -223,6 +223,13 @@ const MOD_SLOT = {
   'Necramech Mod': 'Necramech',
 };
 
+// Never released outside Warframe China — DE's data marks these with the
+// literal "0000-00-00" release-date sentinel instead of a real date.
+const CHINA_EXCLUSIVE = new Set([
+  '/Lotus/Upgrades/Mods/Warframe/Expert/AvatarAbilityEfficiencyModExpert', // Primed Streamline
+  '/Lotus/Upgrades/Mods/Archwing/Rifle/Expert/ArchwingWeaponElectricityDamageModExpert', // Primed Electrified Barrel
+]);
+
 const seenMods = new Set();
 const mods = [];
 for (const m of rawMods) {
@@ -230,6 +237,7 @@ for (const m of rawMods) {
   // so the slot filter can separate frame mods from auras.
   const slot = m.compatName === 'AURA' ? 'Aura' : MOD_SLOT[m.type];
   if (!slot) continue;
+  if (CHINA_EXCLUSIVE.has(m.uniqueName)) continue;
   if (!m.name || seenMods.has(m.name)) continue;
   seenMods.add(m.name);
   mods.push({
