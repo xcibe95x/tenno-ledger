@@ -106,7 +106,7 @@ for (const it of raw) {
   items.push({
     id: it.uniqueName,
     name: it.name,
-    category: it.type === 'Amp' ? 'Amp' : it.category,
+    category: it.type === 'Amp' ? 'Amp' : it.productCategory === 'MechSuits' ? 'Necramech' : it.category,
     type: it.type === 'Pistol' && it.category === 'Misc' ? 'Kitgun Component' : (it.type ?? null),
     productCategory: it.productCategory ?? null,
     masteryReq: it.masteryReq ?? 0,
