@@ -25,8 +25,8 @@ function buildChips(ws) {
   if (cetus?.expiry) {
     chips.push({
       key: 'cetus', hot: !cetus.isDay, tone: cetus.isDay ? 'day' : 'night',
-      label: `Cetus ${cetus.isDay ? '☀ day' : '☾ night'}`,
-      left: timeLeft(cetus.expiry),
+      label: `Cetus: ${cetus.isDay ? 'Day' : 'Night'}`,
+      expiry: cetus.expiry,
       do: cetus.isDay
         ? 'Plains of Eidolon: Konzu bounties, mining ore/gems and fishing. Eidolons return at night.'
         : 'Eidolon hunts are live — capture Teralyst → Gantulyst → Hydrolyst on the Plains.',
@@ -37,8 +37,8 @@ function buildChips(ws) {
   if (vallis?.expiry) {
     chips.push({
       key: 'vallis', hot: vallis.isWarm, tone: vallis.isWarm ? 'warm' : 'cold',
-      label: `Vallis ${vallis.isWarm ? '♨ warm' : '❄ cold'}`,
-      left: timeLeft(vallis.expiry),
+      label: `Vallis: ${vallis.isWarm ? 'Warm' : 'Cold'}`,
+      expiry: vallis.expiry,
       do: vallis.isWarm
         ? 'Orb Vallis is warm — warm-only fish and certain Avichaea spawn. Short window!'
         : 'Orb Vallis is cold — cold-water fishing and most conservation. Toroid farming any time.',
@@ -51,8 +51,8 @@ function buildChips(ws) {
     const fass = active === 'fass';
     chips.push({
       key: 'cambion', hot: fass, tone: fass ? 'fass' : 'vome',
-      label: `Deimos ${fass ? 'Fass' : 'Vome'}`,
-      left: timeLeft(cambion.expiry),
+      label: `Deimos: ${fass ? 'Fass' : 'Vome'}`,
+      expiry: cambion.expiry,
       do: fass
         ? 'Fass is active — Fass-gated fish spawn and Fass Residue drops from Vitreospina.'
         : 'Vome is active — Vome-gated fish and Vome Residue. Isolation Vaults run any time.',
@@ -66,7 +66,7 @@ function buildChips(ws) {
       key: 'zariman', hot: false,
       tone: zs === 'corpus' ? 'corpus' : zs === 'grineer' ? 'grineer' : 'faction',
       label: `Zariman: ${zariman.state}`,
-      left: timeLeft(zariman.expiry),
+      expiry: zariman.expiry,
       do: `${zariman.state} controls the Zariman now — sets which Angels of the Zariman bounties and enemy spawns are up (Voidplume farming).`,
     });
   }
@@ -78,7 +78,7 @@ function buildChips(ws) {
     chips.push({
       key: 'duviri', hot: false, tone: moods.has(mood) ? mood : 'duviri',
       label: `Duviri: ${duviri.state}`,
-      left: duviri.expiry ? timeLeft(duviri.expiry) : null,
+      expiry: duviri.expiry ?? null,
       do: `The Duviri spiral mood is ${duviri.state} — it shifts The Circuit's enemies and which incarnon/Kullervo rewards are emphasised.`,
     });
   }
@@ -91,13 +91,13 @@ function buildChips(ws) {
     if (now < arrives) {
       chips.push({
         key: 'baro', hot: false, tone: 'baro',
-        label: 'Baro in', left: timeLeft(baro.activation),
+        label: 'Baro in', expiry: baro.activation,
         do: "Baro Ki'Teer inbound. His stock rotates — often mastery gear like Prisma weapons and Mara Detron. Stockpile Ducats now.",
       });
     } else if (now < leaves) {
       chips.push({
         key: 'baro', hot: true, tone: 'baro',
-        label: `Baro at ${baro.location ?? 'a relay'}`, left: timeLeft(baro.expiry),
+        label: `Baro at ${baro.location ?? 'a relay'}`, expiry: baro.expiry,
         do: "Baro Ki'Teer is at the relay — spend Ducats + credits.",
         pro: 'Grab any mastery-worthy weapons you still need before he leaves.',
       });
@@ -130,8 +130,16 @@ export default function WorldClock() {
     };
     load();
     const fetchTimer = setInterval(load, REFRESH_MS);
-    // re-render countdowns every 30s without refetching
-    const tick = setInterval(() => setChips(c => [...c]), 30000);
+    // Re-render every 30s so countdowns tick down live. If a cycle has
+    // actually expired (the upstream worldstate mirror is lagging behind the
+    // real in-game rotation), refetch immediately instead of waiting out the
+    // full 5-minute interval with a dead timer.
+    const tick = setInterval(() => {
+      setChips(c => {
+        if (c.some(chip => chip.expiry && Date.parse(chip.expiry) - Date.now() <= 0)) load();
+        return [...c];
+      });
+    }, 30000);
     return () => { alive = false; clearInterval(fetchTimer); clearInterval(tick); };
   }, []);
 
@@ -148,7 +156,7 @@ export default function WorldClock() {
             onClick={() => toggle(c)}
             onMouseEnter={CAN_HOVER ? () => setActive(c) : undefined}
           >
-            {c.label}{c.left ? <b> {c.left}</b> : null}
+            {c.label}{timeLeft(c.expiry) ? <b> {timeLeft(c.expiry)}</b> : null}
           </button>
         ))}
       </div>
