@@ -23,6 +23,11 @@ const FILES = [
   'Misc.json', // amps, k-drives and other stray masterables
 ];
 
+// Upstream split component details out of the item files: an item's
+// `components` array is now just { uniqueName, itemCount }, and the name,
+// image and drop table live in these catalogues instead.
+const COMPONENT_FILES = ['Components.json', 'Misc.json', 'Resources.json', 'Gear.json'];
+
 // Founders / permanently unobtainable gear — shown in the checklist but
 // excluded from the farm planner.
 const UNOBTAINABLE = new Set([
@@ -68,14 +73,18 @@ function bestDrops(drops, n = 4) {
     .map(trimDrop);
 }
 
+// uniqueName -> catalogue entry, filled in once the component files are down.
+const componentIndex = new Map();
+
 function trimComponent(c) {
+  const ref = componentIndex.get(c.uniqueName) ?? {};
   return {
     uniqueName: c.uniqueName,
-    name: c.name,
+    name: c.name ?? ref.name ?? null,
     itemCount: c.itemCount ?? 1,
-    type: c.type ?? null,
-    imageName: c.imageName ?? null,
-    drops: bestDrops(c.drops, 3),
+    type: c.type ?? ref.type ?? null,
+    imageName: c.imageName ?? ref.imageName ?? null,
+    drops: bestDrops(c.drops ?? ref.drops, 3),
   };
 }
 
@@ -88,6 +97,18 @@ async function fetchJson(file) {
 console.log('Fetching item data from WFCD/warframe-items ...');
 const raw = (await Promise.all(FILES.map(fetchJson))).flat();
 console.log(`Fetched ${raw.length} raw items`);
+
+console.log('Fetching component catalogues ...');
+const rawComponents = (await Promise.all(COMPONENT_FILES.map(fetchJson))).flat();
+for (const c of rawComponents) {
+  if (c.uniqueName && !componentIndex.has(c.uniqueName)) componentIndex.set(c.uniqueName, c);
+}
+// Masterable gear can itself be a component (Akbronco needs 2x Bronco), so
+// index the item files too — they win over the catalogues for those names.
+for (const it of raw) {
+  if (it.uniqueName) componentIndex.set(it.uniqueName, it);
+}
+console.log(`Indexed ${componentIndex.size} component sources`);
 
 // Entries that duplicate another mastery item. The Orion/Sirius twins are one
 // warframe in-game (6000 mastery once, tracked on the Sirius suit).

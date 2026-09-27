@@ -1,9 +1,26 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import useSWR from 'swr';
 
 // Open-world cycle timers + Baro, from api.warframestat.us (PC worldstate).
 const API = 'https://api.warframestat.us/pc';
 const ENDPOINTS = ['cetusCycle', 'vallisCycle', 'cambionCycle', 'zarimanCycle', 'duviriCycle', 'voidTrader'];
 const REFRESH_MS = 5 * 60 * 1000;
+
+// One SWR key for the whole strip: each endpoint is fetched in parallel and
+// the ones that fail are simply left out of the worldstate.
+async function fetchWorldstate() {
+  const results = await Promise.allSettled(
+    ENDPOINTS.map(e => fetch(`${API}/${e}`).then(r => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json();
+    })),
+  );
+  const ws = {};
+  ENDPOINTS.forEach((e, i) => { if (results[i].status === 'fulfilled') ws[e] = results[i].value; });
+  return ws;
+}
+
+const NO_CHIPS = [];
 
 const CAN_HOVER = typeof window !== 'undefined'
   && window.matchMedia?.('(hover: hover)').matches;
@@ -107,7 +124,6 @@ function buildChips(ws) {
 }
 
 export default function WorldClock() {
-  const [chips, setChips] = useState([]);
   // The active chip whose detail is shown. Kept as just the chip so the detail
   // panel sits in one fixed spot and only its text changes as you move across
   // chips — no jumping, repositioning, or scroll-detaching tooltip.
@@ -115,33 +131,25 @@ export default function WorldClock() {
   // Tap toggles on touch (no hover); tapping the open chip closes it.
   const toggle = (chip) => setActive(a => (a?.key === chip.key ? null : chip));
 
+  const { data: worldstate, mutate: refetch } = useSWR('worldstate', fetchWorldstate, {
+    refreshInterval: REFRESH_MS,
+    revalidateOnFocus: true,
+    keepPreviousData: true, // worldstate down — keep the last good strip
+  });
+  const chips = useMemo(() => (worldstate ? buildChips(worldstate) : NO_CHIPS), [worldstate]);
+
+  // Re-render every 30s so countdowns tick down live. If a cycle has actually
+  // expired (the upstream worldstate mirror is lagging behind the real in-game
+  // rotation), refetch immediately instead of waiting out the full 5-minute
+  // interval with a dead timer.
+  const [, setTick] = useState(0);
   useEffect(() => {
-    let alive = true;
-    const load = async () => {
-      try {
-        const results = await Promise.allSettled(
-          ENDPOINTS.map(e => fetch(`${API}/${e}`).then(r => r.json())),
-        );
-        if (!alive) return;
-        const ws = {};
-        ENDPOINTS.forEach((e, i) => { if (results[i].status === 'fulfilled') ws[e] = results[i].value; });
-        setChips(buildChips(ws));
-      } catch { /* worldstate down — strip simply stays hidden */ }
-    };
-    load();
-    const fetchTimer = setInterval(load, REFRESH_MS);
-    // Re-render every 30s so countdowns tick down live. If a cycle has
-    // actually expired (the upstream worldstate mirror is lagging behind the
-    // real in-game rotation), refetch immediately instead of waiting out the
-    // full 5-minute interval with a dead timer.
     const tick = setInterval(() => {
-      setChips(c => {
-        if (c.some(chip => chip.expiry && Date.parse(chip.expiry) - Date.now() <= 0)) load();
-        return [...c];
-      });
+      if (chips.some(chip => chip.expiry && Date.parse(chip.expiry) - Date.now() <= 0)) refetch();
+      setTick(t => t + 1);
     }, 30000);
-    return () => { alive = false; clearInterval(fetchTimer); clearInterval(tick); };
-  }, []);
+    return () => clearInterval(tick);
+  }, [chips, refetch]);
 
   if (!chips.length) return null;
   return (

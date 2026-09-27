@@ -643,3 +643,6 @@ a:hover { text-decoration: underline; }
   .mrpath-row { flex-wrap: wrap; }
   .mrpath-xp { text-align: left; margin-left: 48px; }
 }
+
+/* Watched by useIncremental to pull in the next slice of a long list. */
+.scroll-sentinel { height: 1px; }

@@ -1,11 +1,15 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import useSWR from 'swr';
 import { STATUS, STATUS_COUNT } from './lib/mastery.js';
 import { supabase, fetchCloudProgress, pushCloudProgress } from './lib/supabase.js';
+import { dataUrl, staticData } from './lib/swr.js';
 import { driveEnabled, driveConnected, wasDriveConnected, connectDrive, disconnectDrive, pullDrive, pushDrive } from './lib/drive.js';
 
 const KEY = 'wfh-progress-v1';
 const VERSION = 2;
 const StoreContext = createContext(null);
+// Stable identity so consumers memoising on `nodes` don't rerun every render.
+const EMPTY_NODES = {};
 
 // v1 saves had 3 states (0 missing / 1 leveling / 2 mastered); v2 inserts
 // FARMING at 1, shifting leveling->2 and mastered->3.
@@ -33,10 +37,6 @@ function loadLocal() {
 }
 
 export function StoreProvider({ children }) {
-  const [items, setItems] = useState(null);
-  const [nodes, setNodes] = useState({});
-  const [dataGeneratedAt, setDataGeneratedAt] = useState(null);
-  const [itemsError, setItemsError] = useState(false);
   const [progress, setProgress] = useState(loadLocal);
   const [user, setUser] = useState(null);
   const [syncState, setSyncState] = useState(supabase ? 'idle' : 'off'); // off | idle | syncing | synced | error
@@ -49,15 +49,19 @@ export function StoreProvider({ children }) {
   const pushTimer = useRef(null);
   const drivePushTimer = useRef(null);
 
-  // Item data
-  const loadItems = useCallback(() => {
-    setItemsError(false);
-    fetch(`${import.meta.env.BASE_URL}data/items.json`)
-      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
-      .then(d => { setItems(d.items); setNodes(d.nodes ?? {}); setDataGeneratedAt(d.generatedAt ?? null); })
-      .catch(e => { console.error('failed to load item database', e); setItemsError(true); });
-  }, []);
-  useEffect(() => { loadItems(); }, [loadItems]);
+  // Item data. Static per deploy, so SWR loads it once and holds it; `Retry`
+  // in the error state re-runs the request through mutate().
+  const { data: itemData, error: itemsFetchError, mutate: reloadItems } = useSWR(
+    dataUrl('items.json'), staticData,
+  );
+  const items = itemData?.items ?? null;
+  const nodes = itemData?.nodes ?? EMPTY_NODES;
+  const dataGeneratedAt = itemData?.generatedAt ?? null;
+  const itemsError = !!itemsFetchError;
+  const loadItems = useCallback(() => reloadItems(), [reloadItems]);
+  useEffect(() => {
+    if (itemsFetchError) console.error('failed to load item database', itemsFetchError);
+  }, [itemsFetchError]);
 
   // Persist locally on every change
   useEffect(() => {

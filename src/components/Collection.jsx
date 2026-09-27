@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useStore } from '../store.jsx';
 import { STATUS } from '../lib/mastery.js';
 import { usePersisted } from '../lib/usePersisted.js';
+import { useIncremental } from '../lib/useIncremental.js';
 import ItemCard from './ItemCard.jsx';
 
 const SORTS = {
@@ -53,6 +54,11 @@ export default function Collection() {
         (!needle || i.name.toLowerCase().includes(needle)))
       .sort(SORTS[sort]);
   }, [items, q, cat, st, variant, sort, keepOnly, keepIds, progress.status]);
+
+  // Mount the grid in slices as it scrolls — the full roster is 800+ cards.
+  const { limit, sentinelRef, done } = useIncremental(shown.length, {
+    resetKey: `${q}|${cat}|${st}|${variant}|${sort}|${keepOnly}`,
+  });
 
   return (
     <section>
@@ -117,9 +123,12 @@ export default function Collection() {
       {shown.length === 0
         ? <p className="empty">No equipment matches these filters.</p>
         : (
-          <div className="grid">
-            {shown.map(i => <ItemCard key={i.id} item={i} />)}
-          </div>
+          <>
+            <div className="grid">
+              {shown.slice(0, limit).map(i => <ItemCard key={i.id} item={i} />)}
+            </div>
+            {!done && <div ref={sentinelRef} className="scroll-sentinel" aria-hidden="true" />}
+          </>
         )}
     </section>
   );
