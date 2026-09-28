@@ -88,7 +88,7 @@ export default function Settings() {
               rel="noreferrer"
             >
               warframe.com
-            </a>
+            </a>{" "}
             on a computer, then open the site's cookies:
             <ul>
               <li>
@@ -106,8 +106,11 @@ export default function Settings() {
               </li>
               <li>
                 <strong>Safari:</strong> turn on{" "}
-                <em>Safari → Settings → Advanced → Show features for web
-                developers</em>, then <em>Develop → Show Web Inspector</em> (
+                <em>
+                  Safari → Settings → Advanced → Show features for web
+                  developers
+                </em>
+                , then <em>Develop → Show Web Inspector</em> (
                 <kbd>Cmd+Option+I</kbd>) → <em>Storage</em> tab → in the left
                 sidebar, <em>Cookies</em> → <code>www.warframe.com</code>
               </li>
