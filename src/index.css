@@ -566,6 +566,7 @@ a:hover { text-decoration: underline; }
 }
 .panel p, .panel ol { color: var(--muted); font-size: 13.5px; margin-bottom: 10px; overflow-wrap: anywhere; }
 .panel ol { padding-left: 20px; }
+.panel ol ul { padding-left: 18px; margin: 4px 0; list-style: disc; }
 .panel code { color: var(--energy); font-size: 12.5px; word-break: break-all; }
 .panel { min-width: 0; overflow: hidden; }
 .row { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -646,3 +647,13 @@ a:hover { text-decoration: underline; }
 
 /* Watched by useIncremental to pull in the next slice of a long list. */
 .scroll-sentinel { height: 1px; }
+
+/* Long copy-paste one-liners in the import instructions. */
+.snippet {
+  display: inline-block;
+  max-width: 100%;
+  overflow-x: auto;
+  vertical-align: bottom;
+  white-space: pre;
+  user-select: all;
+}
